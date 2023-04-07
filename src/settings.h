@@ -17,9 +17,9 @@
 
 
  // neu 200730
- #define MC_STEP        14
- #define MC_RI          15
- #define MC_EN          16
+ #define MC_STEP        6
+ #define MC_RI          7
+ #define MC_EN          8
  
  //Pins 
 
@@ -38,10 +38,10 @@
 #define DC_PWM              22
 
 // 10,11,12: SPI
- #define MD_STEP            14           // PIN auf Stepperport 2
+ #define MD_STEP            9           // PIN auf Stepperport 2
 // 18, 19: I2C
-#define MD_RI              15
-#define MD_EN              16
+#define MD_RI              10
+#define MD_EN              30
 
 #define END_C0_PIN         11 //18           // Anschlagstatus:  Bit fuer Endanschlag bei C0
 #define END_D0_PIN         12 //19           // Anschlagstatus:  Bit fuer Endanschlag bei D0

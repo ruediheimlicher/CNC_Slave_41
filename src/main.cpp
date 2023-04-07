@@ -329,7 +329,6 @@ void delaytimerfunction(void) // 1us ohne ramp
          bres_delayB-=1;
       }
 
-      
    } 
       //OSZI_A_HI();
 
@@ -1336,7 +1335,7 @@ void setup()
    digitalWriteFast(MC_EN, HIGH); // HI
   
    // Stepper D
-   /*
+   
    pinMode(MD_STEP, OUTPUT); // HI
    pinMode(MD_RI, OUTPUT); // HI
    pinMode(MD_EN, OUTPUT); // HI
@@ -1345,7 +1344,7 @@ void setup()
    digitalWriteFast(MD_STEP, HIGH); // HI
    digitalWriteFast(MD_RI, HIGH); // HI
    digitalWriteFast(MD_EN, HIGH); // HI
-    */
+    
    
    pinMode(END_A0_PIN, INPUT); // 
    pinMode(END_B0_PIN, INPUT); // 
