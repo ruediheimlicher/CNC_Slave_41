@@ -41,16 +41,25 @@
 // Core library for code-sense - IDE-based
 // !!! Help: http://bit.ly/2AdU7cu
 #include "Arduino.h"
-
+#include "main.h"
+#include <stdint.h>
+#include "display.h"
+//#include "text.h"
+#include "font.h"
 #include <SPI.h>
-// #include "lcd.h"
+ #include "lcd.h"
 #include "settings.h"
 // #include <util/delay.h>
 
 #include <Wire.h>
 // #include <i2c_t3.h>
-// #include <LiquidCrystal_I2C.h> // auch in Makefile angeben!!!
+ #include <LiquidCrystal_I2C.h> // auch in Makefile angeben!!!
 // #include <TeensyThreads.h>
+
+// von VS_RobotAuto_T
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
 
 #include "bresenham.h"
 
@@ -235,6 +244,10 @@ IntervalTimer delayTimer;
 uint16_t errarray[1024];
 uint16_t errpos = 0;
 // Utilities
+// display
+canal_struct canaldata;
+
+canal_struct indata;
 // Ganssle
 
 // Functions
