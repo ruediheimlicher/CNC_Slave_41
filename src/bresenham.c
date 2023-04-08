@@ -51,6 +51,7 @@ void gbham(int xstart, int ystart, int xend, int yend)
    {
       /* x ist schnelle Richtung */
       pdx = incx; pdy = 0;    //pd. ist Parallelschritt 
+      
       ddx = incx; ddy = incy; // dd. ist Diagonalschritt 
       
       deltaslowdirection = dy;   // Delta in langsamer Richtung 
