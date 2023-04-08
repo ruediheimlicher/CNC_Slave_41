@@ -43,8 +43,8 @@
 #define MD_RI              10
 #define MD_EN              30
 
-#define END_C0_PIN         11 //18           // Anschlagstatus:  Bit fuer Endanschlag bei C0
-#define END_D0_PIN         12 //19           // Anschlagstatus:  Bit fuer Endanschlag bei D0
+#define END_C0_PIN         16          // Anschlagstatus:  Bit fuer Endanschlag bei C0
+#define END_D0_PIN         17         // Anschlagstatus:  Bit fuer Endanschlag bei D0
 
 
 
@@ -117,8 +117,10 @@
 #define FIRSTBIT           7
 
 
-#define OSZI_PULS_A        8
-#define OSZI_PULS_B        7
+#define OSZI_PULS_A        38
+#define OSZI_PULS_B        39
+#define OSZI_PULS_C        40
+#define OSZI_PULS_D        41
 
 
 #define THREAD_COUNT_BIT   0
