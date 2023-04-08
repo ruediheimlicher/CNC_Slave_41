@@ -2464,25 +2464,25 @@ void loop()
             // Fehlerterm wieder positiv (>=0) machen
             errB += deltafastdirectionB;
             // Schritt in langsame Richtung, Diagonalschritt
-            if (xB)
+            if (xB >=0)
             {
                xB -= ddxB;
             }
-            if (yB)
+            if (yB >=0)
             {
                yB -= ddyB;
             }
-            if (xB)
+            if (xB >=0)
             {
-               if (ddxB && xB) // Motor C soll steppen
+               if (ddxB && (xB >=0)) // Motor C soll steppen
                {
                   digitalWriteFast(MC_STEP, LOW);
                   stepdurC = STEPDUR;
                }
             }
-            if (yB)
+            if (yB >=0)
             {
-               if (ddyB && yB) // Motor D soll steppen
+               if (ddyB && (yB >=0)) // Motor D soll steppen
                {
                   digitalWriteFast(MD_STEP, LOW);
                   stepdurD = STEPDUR;
@@ -2498,17 +2498,17 @@ void loop()
             xB -= pdxB;
             yB -= pdyB;
 
-            if (xB)
+            if (xB >=0)
             {
-               if (pdxB && xB) // Motor C soll steppen
+               if (pdxB && (xB >=0)) // Motor C soll steppen
                {
                   digitalWriteFast(MC_STEP, LOW);
                   stepdurC = STEPDUR;
                }
             }
-            if (yB)
+            if (yB >=0)
             {
-               if (pdyB && yB) // Motor D soll steppen
+               if (pdyB && (yB >=0)) // Motor D soll steppen
                {
                   digitalWriteFast(MD_STEP, LOW);
                   stepdurC = STEPDUR;
