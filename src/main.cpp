@@ -38,27 +38,45 @@
 /// @n
 ///
 
-// Core library for code-sense - IDE-based
-// !!! Help: http://bit.ly/2AdU7cu
+
 #include "Arduino.h"
-#include "main.h"
 #include <stdint.h>
-#include "display.h"
-//#include "text.h"
-#include "font.h"
+
+#include <SD.h>
 #include <SPI.h>
- #include "lcd.h"
-#include "settings.h"
-// #include <util/delay.h>
 
 #include <Wire.h>
-// #include <i2c_t3.h>
- #include <LiquidCrystal_I2C.h> // auch in Makefile angeben!!!
-// #include <TeensyThreads.h>
+
+#include <LiquidCrystal_I2C.h> // auch in Makefile angeben!!!
+
 
 // von VS_RobotAuto_T
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+
+#include "main.h"
+#include "display.h"
+#include "font.h"
+
+ #include "lcd.h"
+#include "settings.h"
+
+#define OLED_RESET -1
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define SCREEN_ADDRESS 0x3C
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+#define TASTEOK            1
+#define AKTIONOK           2
+#define UPDATEOK           3
+
+uint16_t  cursorpos[8][8]={}; // Aktueller screen: werte fuer page und darauf liegende col fuer den cursor
+uint16_t  posregister[8][8]; // Aktueller screen: werte fuer page und daraufliegende col fuer Menueintraege (hex). geladen aus progmem
+
+
+const int chipSelect = 10;
+
 
 
 #include "bresenham.h"
@@ -244,10 +262,11 @@ IntervalTimer delayTimer;
 uint16_t errarray[1024];
 uint16_t errpos = 0;
 // Utilities
-// display
-canal_struct canaldata;
 
+// OLED display
+canal_struct canaldata;
 canal_struct indata;
+//file:///Users/ruediheimlicher/Documents/Elektronik/ESP-32/OLED/In-Depth:%20Interface%20OLED%20Display%20Module%20with%20ESP8266%20NodeMCU.webarchive
 // Ganssle
 
 // Functions
@@ -1040,7 +1059,7 @@ void thread_func(int inc)
 
 void setup()
 {
-   Serial.begin(9600);
+   Serial.begin(115200);
    pinMode(LOOPLED, OUTPUT);
 
    pinMode(DC_PWM, OUTPUT);
@@ -1110,6 +1129,13 @@ void setup()
       digitalWriteFast(OSZI_PULS_D, HIGH);
    }
 
+
+  // initialize the OLED object
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+
    delay(100);
    // lcd.init();
    delay(100);
@@ -1137,7 +1163,23 @@ void setup()
    // lcd.setCursor(5,0);
    // lcd.print("PWM:");
 */
+
+ 
+
+Serial.print("Initializing SD card...");
+
+  // see if the card is present and can be initialized:
+  if (!SD.begin(BUILTIN_SDCARD)) 
+  {
+    Serial.println("Card failed, or not present");
+    while (1) {
+      // No SD card, so don't do anything more - stay stuck here
+    }
+  }
+  Serial.println("card initialized.");
+
    Serial.println("CNC_Mill_Slave_32_bres\n");
+  
 }
 
 // Add loop code
@@ -1160,7 +1202,7 @@ void loop()
       if (digitalRead(LOOPLED) == 1)
       {
 
-         // Serial.printf("LED ON\n");
+         Serial.printf("LED ON\n");
          digitalWriteFast(LOOPLED, 0);
          /*
           //Serial.printf("blink\t %d\n",loopLED);
