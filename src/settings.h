@@ -23,9 +23,9 @@
  
  //Pins 
 
- #define MA_STEP        13
- #define MA_RI         14
- #define MA_EN          15 
+ #define MA_STEP        0
+ #define MA_RI         1
+ #define MA_EN         2
  
 // Stepper B
  #define MB_STEP         3

@@ -47,13 +47,13 @@
 
 #include <Wire.h>
 
-#include <LiquidCrystal_I2C.h> // auch in Makefile angeben!!!
+//#include <LiquidCrystal_I2C.h> // auch in Makefile angeben!!!
 
 
 // von VS_RobotAuto_T
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-
+#include <LiquidCrystal_I2C.h>
 #include "main.h"
 #include "display.h"
 #include "font.h"
@@ -77,7 +77,9 @@ uint16_t  posregister[8][8]; // Aktueller screen: werte fuer page und darauflieg
 
 const int chipSelect = 10;
 
-
+// https://registry.platformio.org/libraries/fmalpartida/LiquidCrystal/examples/HelloWorld_i2c/HelloWorld_i2c.pde
+//LiquidCrystal_I2C lcd(0x38); 
+LiquidCrystal_I2C lcd(0x27,20,4);
 
 #include "bresenham.h"
 
@@ -1129,17 +1131,21 @@ void setup()
       digitalWriteFast(OSZI_PULS_D, HIGH);
    }
 
-
+/*
   // initialize the OLED object
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
     for(;;); // Don't proceed, loop forever
   }
-
+*/
+lcd.begin(20,4);               // initialize the lcd 
    delay(100);
    // lcd.init();
    delay(100);
    // lcd.backlight();
+     lcd.home ();                   // go home
+  lcd.print("Hello, ARDUINO ");  
+
 
    rampstatus |= (1 << RAMPOKBIT);
 
