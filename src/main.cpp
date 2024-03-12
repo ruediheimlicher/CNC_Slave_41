@@ -1147,7 +1147,7 @@ lcd.begin(20,4);               // initialize the lcd
   lcd.print("Hello, ARDUINO ");  
 
 
-   rampstatus |= (1 << RAMPOKBIT);
+   //rampstatus |= (1 << RAMPOKBIT);
 
    //// lcd.setCursor(0,0);
    //// lcd.print("hallo");
@@ -1489,6 +1489,13 @@ void loop()
       case 0xB5: // PCB neu
       {
          Serial.printf("B5\n");
+         /*
+          digitalWriteFast(MA_EN,HIGH);
+         digitalWriteFast(MB_EN,HIGH);
+         
+         digitalWriteFast(MC_EN,HIGH);
+         digitalWriteFast(MD_EN,HIGH);
+         */
          sendbuffer[0] = 0xB6;
          usb_rawhid_send((void *)sendbuffer, 0);
          uint8_t i = 0;
@@ -1618,6 +1625,19 @@ void loop()
          StepCounterB = 0;
          StepCounterC = 0;
          StepCounterD = 0;
+         digitalWriteFast(MA_STEP, HIGH);
+         digitalWriteFast(MB_STEP, HIGH);
+         digitalWriteFast(MC_STEP, HIGH);
+         digitalWriteFast(MD_STEP, HIGH);
+
+         digitalWriteFast(MA_EN, HIGH);
+         digitalWriteFast(MB_EN, HIGH);
+         digitalWriteFast(MC_EN, HIGH);
+         digitalWriteFast(MD_EN, HIGH);
+ 
+
+
+
 
          xA = 0;
          yA = 0;
@@ -1633,6 +1653,9 @@ void loop()
          ringbufferstatus = 0;
          cncstatus = 0;
          motorstatus = 0;
+         sendbuffer[0] = 0xC2;
+         uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
+
       }
       break;
 
@@ -1787,11 +1810,17 @@ void loop()
          digitalWriteFast(MA_EN, HIGH);
          digitalWriteFast(MB_EN, HIGH);
 
+         digitalWriteFast(MA_EN, HIGH);
+         digitalWriteFast(MB_EN, HIGH);
+         
          digitalWriteFast(MA_STEP, HIGH);
          digitalWriteFast(MB_STEP, HIGH);
+         digitalWriteFast(MC_STEP, HIGH);
+         digitalWriteFast(MD_STEP, HIGH);
+
 
          sendbuffer[0] = 0xF2;
-         //         usb_rawhid_send((void*)sendbuffer, 0);
+                  usb_rawhid_send((void*)sendbuffer, 0);
          sendbuffer[0] = 0x00;
          Serial.printf("F1 reset end\n");
       }
@@ -2360,6 +2389,9 @@ void loop()
 
                analogWrite(DC_PWM, 0);
                cncstatus = 0;
+
+               digitalWriteFast(MA_EN, HIGH);
+               
                /*
                for (uint16_t i=0;i<255;i++)
                {
@@ -2618,6 +2650,7 @@ void loop()
                cncstatus = 0;
                motorstatus = 0;
 
+               digitalWriteFast(MB_EN, HIGH);
                // Serial.printf("*** *** *** *** BD 2\n");
                //
                usb_rawhid_send((void *)sendbuffer, 0);
