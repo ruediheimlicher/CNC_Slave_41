@@ -61,11 +61,25 @@
  #include "lcd.h"
 #include "settings.h"
 
-#define OLED_RESET -1
+#include <ADC.h>
+// https://registry.platformio.org/libraries/adafruit/Adafruit%20SSD1327/examples/ssd1327_test/ssd1327_test.ino
+
+//#include <MUIU8g2.h>
+
+
+#define OLED_RESET   -1
+#define OLED_CS      14
+#define OLED_DC      12
+#define OLED_CLK     13
+#define OLED_MOSI    11
+
+
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define SCREEN_ADDRESS 0x3C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+
 
 #define TASTEOK            1
 #define AKTIONOK           2
@@ -75,13 +89,16 @@ uint16_t  cursorpos[8][8]={}; // Aktueller screen: werte fuer page und darauf li
 uint16_t  posregister[8][8]; // Aktueller screen: werte fuer page und daraufliegende col fuer Menueintraege (hex). geladen aus progmem
 
 
-const int chipSelect = 10;
+const int chipSelect = 14;
 
 // https://registry.platformio.org/libraries/fmalpartida/LiquidCrystal/examples/HelloWorld_i2c/HelloWorld_i2c.pde
 //LiquidCrystal_I2C lcd(0x38); 
 LiquidCrystal_I2C lcd(0x27,20,4);
 
 #include "bresenham.h"
+
+
+#include "U8x8lib.h"
 
 // Set parameters
 
@@ -131,6 +148,8 @@ uint16_t ladeposition = 0;
 // volatile uint16_t          globalaktuelleladeposition = 0;
 uint16_t aktuelleladeposition = 0;
 volatile uint8_t ringbufferstatus = 0x00;
+
+uint8_t aktuellelage = 0; 
 
 uint16_t Abschnitte = 0;
 uint16_t AbschnittCounter = 0;
@@ -201,6 +220,7 @@ volatile uint8_t timerstatus = 0;
 volatile uint8_t status = 0;
 
 volatile uint8_t pfeilstatus = 0;
+volatile uint8_t tastaturstatus = 0;
 
 volatile uint8_t PWM = 0;
 static volatile uint8_t pwmposition = 0;
@@ -244,7 +264,7 @@ volatile uint32_t rampstepstart = 0; // Stepcounter am Anfang
 // volatile uint32_t          ramptimercounter=0;  // laufender counter  fuer Rampanpassung
 // volatile uint32_t          //ramptimerdelay = 100;  // Takt fuer Rampanpassung
 uint8_t rampschritt = 2;
-volatile uint16_t rampbreite = 0; // anzahl Schritte der Ramp. Wird beim Start bestimmt und fuer das Ende verwendet
+volatile uint16_t rampbreite = 10; // anzahl Schritte der Ramp. Wird beim Start bestimmt und fuer das Ende verwendet
 
 volatile uint32_t rampendstep = 0; // Beginn der Endramp. Wird in Abschnittladen bestimmt
 
@@ -271,6 +291,21 @@ canal_struct indata;
 //file:///Users/ruediheimlicher/Documents/Elektronik/ESP-32/OLED/In-Depth:%20Interface%20OLED%20Display%20Module%20with%20ESP8266%20NodeMCU.webarchive
 // Ganssle
 
+
+// ADC
+#define TASTATURPIN  A9
+
+uint16_t tastenwert = 0;
+uint8_t Taste = 0;
+uint16_t tastaturcounter = 0;
+uint16_t prellcounter = 0;
+uint8_t manright [64] = {128, 37, 0, 0, 20, 0, 0, 0, 128, 37, 0, 0, 20, 0, 0, 0, 194, 3, 0, 0, 0, 1, 1, 48, 240, 48, 1, 0, 0, 0, 0, 17, 3, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+
+
+uint8_t manup [64] = {0, 0, 128, 37, 0, 0, 20, 0, 0, 0, 128, 37, 0, 0, 20, 0, 194, 3, 0, 0, 0, 2, 1, 48, 240, 48, 1, 0, 0, 0, 0, 17, 3, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t manleft [64] = {128, 165, 0, 0, 20, 0, 0, 0, 128, 165, 0, 0, 20, 0, 0, 0, 194, 3, 0, 0, 0, 1, 1, 48, 240, 48, 1, 0, 0, 0, 0, 17, 3, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t mandown [64] = {0, 0, 128, 165, 0, 0, 20, 0, 0, 0, 128, 165, 0, 0, 20, 0, 194, 3, 0, 0, 0, 2, 1, 48, 240, 48, 1, 0, 0, 0, 0, 17, 3, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 // Functions
 
 // bresenham
@@ -380,7 +415,7 @@ uint8_t AbschnittLaden_bres(uint8_t *AbschnittDaten) // 22us
    //  lcd_puts("    ");
 
    uint8_t returnwert = 0;
-
+   
    /*
     Reihenfolge der Daten:
     0    schritteax lb
@@ -429,7 +464,7 @@ uint8_t AbschnittLaden_bres(uint8_t *AbschnittDaten) // 22us
    if (AbschnittDaten[35] == 1)
    {
       // Serial.printf("+++ +++ +++ \t\t\t index: %d AbschnittLaden_bres WENDEPUNKT \n",index);
-      //     rampstatus |=(1<<RAMPOKBIT);
+         //  rampstatus |=(1<<RAMPOKBIT);
    }
 
    // pwm-rate
@@ -670,8 +705,8 @@ uint8_t AbschnittLaden_bres(uint8_t *AbschnittDaten) // 22us
 
    if (rampstatus & (1 << RAMPOKBIT))
    {
-      Serial.printf("AbschnittLaden_bres index: %d set RAMPSTARTBIT\n", index);
-      rampstatus |= (1 << RAMPSTARTBIT);
+      //Serial.printf("AbschnittLaden_bres index: %d set RAMPSTARTBIT\n", index);
+      rampstatus |= (1 << RAMPSTARTBIT); // Ramp an Start
       errpos = 0;
       ramptimerintervall += (ramptimerintervall / 4 * 3);
       delayTimer.update(ramptimerintervall);
@@ -738,6 +773,7 @@ uint8_t AbschnittLaden_bres(uint8_t *AbschnittDaten) // 22us
 
    // Serial.printf("\nAbschnittLaden_bres end aktuellelage: %d \n",returnwert);
    OSZI_A_HI();
+   tastaturstatus = 0 ;
    return returnwert;
 }
 
@@ -939,7 +975,7 @@ void AnschlagVonMotor(const uint8_t motor)
 
             Serial.printf("E\n");
             uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
-            // Serial.printf("*** Anschlag Home motor senderfolg: %d\n",senderfolg);
+             Serial.printf("*** Anschlag Home motor senderfolg: %d\n",senderfolg);
             for (uint8_t i = 0; i < 32; i++) // 5 us ohne printf, 10ms mit printf
             {
                // Serial.printf("%d \t",sendbuffer[i]);
@@ -1014,6 +1050,7 @@ void thread_func(int inc)
    // lcd.setCursor(5,0);
    // lcd.print("PWM:");
 */
+/*
    while (1)
    {
       if (parallelstatus & (1 << THREAD_COUNT_BIT))
@@ -1028,15 +1065,15 @@ void thread_func(int inc)
          // lcd.print(String(rest));
 
          //  s.append(rest);
-         /*
+         
          s.append("n ");
 
          s.append(StepCounterA);
          s.append("\n");
 
          // lcd.print(s);
-        */
-         /*
+        
+         
          //// lcd.print(String(parallelcounter));
          // lcd.setCursor(9,0);
          // lcd.print(String(PWM));
@@ -1044,10 +1081,11 @@ void thread_func(int inc)
          // lcd.print(String(StepCounterA));
          // lcd.setCursor(8,1);
          // lcd.print(String(StepCounterB));
-          */
+          
          parallelstatus &= ~(1 << THREAD_COUNT_BIT);
       }
    }
+   */
    /*
    if (sincelastthread >= 500)
    {
@@ -1059,11 +1097,104 @@ void thread_func(int inc)
    */
 }
 
+ADC *adc = new ADC(); // adc object;
+
+uint8_t Tastenwahl(uint16_t Tastaturwert)
+{
+     if (Tastaturwert < TASTEX)
+      return 0;
+
+   if (Tastaturwert < TASTE1)
+      return 1;
+   if (Tastaturwert < TASTE2)
+      return 2;
+   if (Tastaturwert < TASTE3)
+      return 3;
+   if (Tastaturwert < TASTE4)
+      return 4;
+   if (Tastaturwert < TASTE5)
+      return 5;
+   if (Tastaturwert < TASTE6)
+      return 6;
+   if (Tastaturwert < TASTE7)
+      return 7;
+   if (Tastaturwert < TASTE8)
+      return 8;
+   if (Tastaturwert < TASTE9)
+      return 9;
+   if (Tastaturwert < TASTEL)
+      return 10;
+   if (Tastaturwert < TASTE0)
+      return 0;
+   if (Tastaturwert < TASTER)
+      return 12;
+   
+   return 0;
+}
+ // tastenwahl
+
+void stopCNC(void)
+{
+         Serial.printf("F1 reset\n");
+         uint8_t i = 0, k = 0;
+         for (k = 0; k < RINGBUFFERTIEFE; k++)
+         {
+            for (i = 0; i < USB_DATENBREITE; i++)
+            {
+               CNCDaten[k][i] = 0;
+            }
+         }
+
+         ringbufferstatus = 0;
+         motorstatus = 0;
+         anschlagstatus = 0;
+         tastaturstatus = 0xF0 ;
+         cncstatus = 0;
+         ladeposition = 0;
+         endposition = 0xFFFF;
+
+         AbschnittCounter = 0;
+         PWM = 0;
+         // digitalWriteFast(DC_PWM,LOW);
+         analogWrite(DC_PWM, 0);
+         korrekturcounterx = 0;
+         korrekturcountery = 0;
+
+         xA = 0;
+         yA = 0;
+
+         xB = 0;
+         yB = 0;
+
+         digitalWriteFast(MA_EN, HIGH);
+         digitalWriteFast(MB_EN, HIGH);
+
+         digitalWriteFast(MA_EN, HIGH);
+         digitalWriteFast(MB_EN, HIGH);
+         
+         digitalWriteFast(MA_STEP, HIGH);
+         digitalWriteFast(MB_STEP, HIGH);
+         digitalWriteFast(MC_STEP, HIGH);
+         digitalWriteFast(MD_STEP, HIGH);
+
+
+         sendbuffer[0] = 0xF2;
+                  usb_rawhid_send((void*)sendbuffer, 0);
+         sendbuffer[0] = 0x00;
+         Serial.printf("F1 reset end\n");
+      }
+
 void setup()
 {
    Serial.begin(115200);
    pinMode(LOOPLED, OUTPUT);
 
+// https://registry.platformio.org/libraries/pedvide/Teensy_ADC/examples/analogRead/analogRead.ino
+   pinMode(TASTATURPIN , INPUT);
+   adc->adc0->setAveraging(4); // set number of averages
+   adc->adc0->setResolution(8);
+   adc->adc0->setConversionSpeed(ADC_CONVERSION_SPEED::HIGH_SPEED);
+   adc->adc0->setSamplingSpeed(ADC_SAMPLING_SPEED::HIGH_SPEED);
    pinMode(DC_PWM, OUTPUT);
    // digitalWriteFast(DC_PWM, HIGH); // OFF
    digitalWriteFast(DC_PWM, 1);
@@ -1131,13 +1262,33 @@ void setup()
       digitalWriteFast(OSZI_PULS_D, HIGH);
    }
 
-/*
+
   // initialize the OLED object
-  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
+
+  // https://forum.pjrc.com/index.php?threads/teensy-3-2-ssd1306-hardware-spi.70260/
+  //if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) 
+   
+   
+  
+
+/*
+// Waveshare OLED
+ if ( ! OLED_display.begin(0x3D) ) {
+     Serial.println("Unable to initialize OLED");
+     while (1) yield();
   }
+ OLED_display.clearDisplay();
+  OLED_display.display();
+
+
+
+// draw rectangles
+  testdrawrect();
+  OLED_display.display();
+  delay(1000);
+  OLED_display.clearDisplay();
 */
+/*
 lcd.begin(20,4);               // initialize the lcd 
    delay(100);
    // lcd.init();
@@ -1145,9 +1296,9 @@ lcd.begin(20,4);               // initialize the lcd
    // lcd.backlight();
      lcd.home ();                   // go home
   lcd.print("Hello, ARDUINO ");  
+*/
 
-
-   //rampstatus |= (1 << RAMPOKBIT);
+  // rampstatus |= (1 << RAMPOKBIT);
 
    //// lcd.setCursor(0,0);
    //// lcd.print("hallo");
@@ -1171,7 +1322,7 @@ lcd.begin(20,4);               // initialize the lcd
 */
 
  
-
+/*
 Serial.print("Initializing SD card...");
 
   // see if the card is present and can be initialized:
@@ -1185,7 +1336,8 @@ Serial.print("Initializing SD card...");
   Serial.println("card initialized.");
 
    Serial.println("CNC_Mill_Slave_32_bres\n");
-  
+  */
+ //tastaturstatus = 0xF0;
 }
 
 // Add loop code
@@ -1207,8 +1359,21 @@ void loop()
 
       if (digitalRead(LOOPLED) == 1)
       {
+         // OLED
 
-         Serial.printf("LED ON\n");
+
+
+      //if (tastaturstatus == 0xF0)
+      {
+         sendbuffer[0] = 0xB8;
+         sendbuffer[59] = tastaturcounter++;
+         sendbuffer[57] = tastenwert;
+         sendbuffer[58] = Taste;
+
+         uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
+      }
+         // OLED
+         //Serial.printf("LED ON\n");
          digitalWriteFast(LOOPLED, 0);
          /*
           //Serial.printf("blink\t %d\n",loopLED);
@@ -1237,13 +1402,14 @@ void loop()
 
          if (digitalRead(END_B0_PIN)) // Eingang ist HI, Schlitten nicht am Anschlag A0
          {
-            Serial.printf("Anschlag Motor B OFF\n");
+            //Serial.printf("Anschlag Motor B OFF\n");
          }
          else
          {
             Serial.printf("Anschlag Motor B ON\n");
          }
 */
+
       }
       else
       {
@@ -1262,10 +1428,96 @@ void loop()
       //     timerfunction();
 
       //   digitalWrite(OSZI_PULS_A, !digitalRead(OSZI_PULS_A));
-   }
+      tastenwert = adc->adc0->analogRead(TASTATURPIN);
+      //tastenwert = 99;
+      uint8_t oldTaste = Taste;
 
-   ////#pragma mark start_usb
+      Taste = Tastenwahl(tastenwert);
+      //sendbuffer[57] = tastenwert;
+      //sendbuffer[58] = Taste+33;
 
+
+   switch (Taste)
+   {
+      case 0://
+         { 
+            //Serial.printf("Taste 0\n");
+            if(oldTaste)
+            {
+
+           // stopCNC();
+            oldTaste = 0;
+            }
+            //
+            break;
+         }
+         break;
+
+         case 1:// 
+         { 
+            //Serial.printf("Taste 1\n");
+            break;
+         }
+         break;
+         case 2:// up
+         { 
+            //Serial.printf("Taste 2\n");
+            aktuellelage = AbschnittLaden_bres(manup);
+            break;
+         }
+         break;
+         case 3:// 
+         { 
+            //Serial.printf("Taste 3\n");
+            break;
+         }
+         break;
+         case 4:// left
+         { 
+            Serial.printf("Taste 4\n");
+            aktuellelage = AbschnittLaden_bres(manleft);
+            break;
+         }
+         break;
+         case 5:// 
+         { 
+            Serial.printf("Taste 5\n");
+            break;
+         }
+         break;
+         case 6:// right
+         { 
+            Serial.printf("Taste 6\n");
+            aktuellelage = AbschnittLaden_bres(manright);
+            break;
+         }
+         break;
+         case 7:// 
+         { 
+            Serial.printf("Taste 7\n");
+            break;
+         }
+         break;
+         case 8:// down
+         { 
+            Serial.printf("Taste 8\n");
+            aktuellelage = AbschnittLaden_bres(mandown);
+            break;
+         }
+         break;
+         case 9:// 
+         { 
+            Serial.printf("Taste 9\n");
+            break;
+         }
+         break;
+
+
+      }
+   }// switch taste
+ 
+   ////#pragma mark start_(usb
+   
    r = usb_rawhid_recv((void *)buffer, 0); // 1.5us
 
    if (r > 0) //
@@ -1282,7 +1534,7 @@ void loop()
       //     lcd.print(String(code));
       uint8_t device = buffer[32];
 
-      Serial.printf("\n----------------------------------->    rawhid_recv code: %02X device: %d\n", code, device);
+      //Serial.printf("\n----------------------------------->    rawhid_recv code: %02X device: %d\n", code, device);
       // for(uint8_t i=0;i<36;i++) // 5 us ohne printf, 10ms mit printf
       //{
       //    Serial.printf("%d \t",buffer[i]);
@@ -1427,7 +1679,7 @@ void loop()
          }
          else // Abschnittnummer > 0
          {
-            Serial.printf("XX\n");
+            //Serial.printf("XX\n");
             // Ablauf schon gestartert
             //          Serial.printf("  -----                  B3 Ablauf gestartet, abschnittnummer: %d\n",abschnittnummer);
             // lcd.setCursor(12,0);
@@ -1570,16 +1822,16 @@ void loop()
       break;
 
          ////#pragma mark C0 Pfeiltaste
-      case 0xC0:
+      case 0xC0: // mousedown
       {
-         Serial.printf("case C0\n");
+         //Serial.printf("case C0\n");
          sendbuffer[24] = buffer[32];
 
          // Abschnittnummer bestimmen
          uint8_t indexh = buffer[18];
          uint8_t indexl = buffer[19];
          uint8_t position = buffer[17];
-         Serial.printf("C0 position: %d\n", position);
+         //Serial.printf("C0 position: %d\n", position);
          abschnittnummer = indexh << 8;
          abschnittnummer += indexl;
          sendbuffer[0] = 0xC2;
@@ -1596,6 +1848,7 @@ void loop()
          anschlagstatus = 0;
          ringbufferstatus |= (1 << FIRSTBIT);
          ringbufferstatus |= (1 << STARTBIT);
+         ringbufferstatus |= (1 << LASTBIT);
          AbschnittCounter = 0;
          endposition = abschnittnummer;
          // Daten vom buffer in CNCDaten laden
@@ -1612,15 +1865,19 @@ void loop()
                CNCDaten[pos][i] = buffer[i];
             }
          }
+         sendbuffer[0] = 0xC2;
+         uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
+         startTimer2();
+
       }
       break;
 
-      case 0xC2:
+      case 0xC2: // mouseup
       {
-         Serial.printf("case C2\n");
+         //Serial.printf("case C2\n");
          uint8_t richtung = buffer[31];
-         Serial.printf("richtung: %d\n", richtung);
-         Serial.printf("StepCounterA: %d StepCounterB: %d StepCounterC: %d StepCounterD: %d \n", StepCounterA, StepCounterB, StepCounterC, StepCounterD);
+         //Serial.printf("richtung: %d\n", richtung);
+         //Serial.printf("StepCounterA: %d StepCounterB: %d StepCounterC: %d StepCounterD: %d \n", StepCounterA, StepCounterB, StepCounterC, StepCounterD);
          StepCounterA = 0;
          StepCounterB = 0;
          StepCounterC = 0;
@@ -1635,10 +1892,6 @@ void loop()
          digitalWriteFast(MC_EN, HIGH);
          digitalWriteFast(MD_EN, HIGH);
  
-
-
-
-
          xA = 0;
          yA = 0;
          bres_counterA = 0;
@@ -1651,8 +1904,14 @@ void loop()
          bres_delayB = 0;
 
          ringbufferstatus = 0;
+
+         //ringbufferstatus |= (1 << STARTBIT);
+         //ringbufferstatus |= (1 << FIRSTBIT); // Experiment 240312
+         // > in 0xC0
          cncstatus = 0;
          motorstatus = 0;
+        
+         
          sendbuffer[0] = 0xC2;
          uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
 
@@ -1673,7 +1932,7 @@ void loop()
          anschlagstatus = 0;
          cncstatus = 0;
          sendbuffer[0] = 0xE1;
-
+         tastaturstatus = 0xF0 ;
          sendbuffer[5] = (abschnittnummer & 0xFF00) >> 8;
          ;
          sendbuffer[6] = abschnittnummer & 0x00FF;
@@ -1789,7 +2048,7 @@ void loop()
          ringbufferstatus = 0;
          motorstatus = 0;
          anschlagstatus = 0;
-
+         tastaturstatus = 0xF0 ;
          cncstatus = 0;
          ladeposition = 0;
          endposition = 0xFFFF;
@@ -1829,7 +2088,7 @@ void loop()
          // MARK: F0
       case 0xF0: // cncstatus fuer go_home setzen
       {
-
+tastaturstatus = 0 ;
          Serial.printf("F0 home \n");
          //  gohome();
          //  break;
@@ -2014,6 +2273,7 @@ void loop()
                sendbuffer[6] = ladeposition;
                sendbuffer[0] = 0xAF;
                usb_rawhid_send((void *)sendbuffer, 0);
+               tastaturstatus = 0xF0 ;
                sei();
             }
          }
@@ -2050,7 +2310,7 @@ void loop()
     #define FIRSTBIT   7
 
     */
-   /**   Start CNC-routinen   ***********************/
+   /*   Start CNC-routinen   ********************** */
    if (ringbufferstatus & (1 << STARTBIT)) // Buffer ist in Ringbuffer geladen, Schnittdaten von Abschnitt 0 laden
    {
       // noInterrupts();
@@ -2262,9 +2522,7 @@ void loop()
          {
             if (ramptimerintervall > timerintervall_FAST) // noch nicht auf max speed
             {
-               // errarray[errpos++] = ramptimerintervall;
-               //   Serial.printf("start ramptimerintervall: %d\n",ramptimerintervall);
-               if (rampstatus & (1 << RAMPOKBIT))
+                if (rampstatus & (1 << RAMPOKBIT))
                {
                   ramptimerintervall -= RAMPSCHRITT;
 
@@ -2272,7 +2530,7 @@ void loop()
                   // rampbreite++;
                }
             }
-            else
+            else // max
             {
                // OSZI_B_HI();
                // errarray[errpos++] = 1000;
@@ -2284,7 +2542,10 @@ void loop()
                // Serial.printf("end ramp\n");
                rampstatus &= ~(1 << RAMPOKBIT);
             }
-         }
+         } //  RAMPSTARTBIT
+
+
+
          // end ramp
 
          //      noInterrupts();
@@ -2403,7 +2664,7 @@ void loop()
             }
             else
             {
-               uint8_t aktuellelage = 0; // Lage innerhalb der Abschnittserie: Start: 1, Innerhalb: 0, Ende: 2
+               aktuellelage = 0; // Lage innerhalb der Abschnittserie: Start: 1, Innerhalb: 0, Ende: 2
 
                uint8_t aktuelleladeposition = (ladeposition & 0x00FF); // 8 bit
                aktuelleladeposition &= 0x03;
@@ -2446,6 +2707,7 @@ void loop()
                   // sendbuffer[7]=(ladeposition & 0xFF00) >> 8;
                   sendbuffer[22] = cncstatus;
                   usb_rawhid_send((void *)sendbuffer, 0);
+tastaturstatus = 0xF0 ;
                   // sei();
                }
                else
@@ -2540,6 +2802,7 @@ void loop()
       {
          // Serial.printf("D %d ",bres_counterB);
          //   noInterrupts();
+
 
          // bres
          // Aktualisierung Fehlerterm

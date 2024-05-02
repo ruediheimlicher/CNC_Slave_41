@@ -169,7 +169,34 @@
 #define  INDEX_BYTE_H  18
 #define  INDEX_BYTE_L  19
 
+/*
+#define TASTE1     67
+#define TASTE2     109
+#define TASTE3     163
+#define TASTE4     253
+#define TASTE5     360
+#define TASTE6     484
+#define TASTE7     628
+#define TASTE8     742
+#define TASTE9     827
+#define TASTEL     899
+#define TASTE0     946
+#define TASTER     993
+*/
+#define TASTEX  10
+#define TASTE1  56
+#define TASTE2  78
+#define TASTE3  101
+#define TASTE4  124
+#define TASTE5  154
+#define TASTE6  182
+#define TASTE7  203
+#define TASTE8  220
+#define TASTE9  240
 
+#define TASTEL     250
+#define TASTE0     250
+#define TASTER     250
 /*
 #define  HYP_BYTE_H  22 // Hypotenuse
 #define  HYP_BYTE_L 23
