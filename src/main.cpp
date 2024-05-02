@@ -132,6 +132,11 @@ elapsedMicros sincelaststep;
 
 elapsedMillis sincelastthread;
 
+
+elapsedMicros sincelastimpuls;
+uint16_t cncdelaycounter = 0;
+
+
 // Prototypes
 
 uint8_t buffer[USB_DATENBREITE] = {};
@@ -299,6 +304,25 @@ uint16_t tastenwert = 0;
 uint8_t Taste = 0;
 uint16_t tastaturcounter = 0;
 uint16_t prellcounter = 0;
+
+
+uint8_t tastencounter = 0;
+uint8_t analogtastaturstatus = 0;
+#define TASTE_OFF  0
+#define TASTE_ON  1
+uint16_t TastenStatus=0;
+uint16_t Tastenprellen=0x1F;
+
+uint8_t            pfeiltastecode = 0;
+
+// von Mill35
+volatile uint16_t           pfeilimpulsdauer = 0;
+volatile uint16_t           pfeilrampcounter = 0;
+volatile uint16_t           pfeilrampdelay = 0;
+volatile uint8_t            endimpulsdauer = ENDIMPULSDAUER;
+
+
+
 uint8_t manright [64] = {128, 37, 0, 0, 20, 0, 0, 0, 128, 37, 0, 0, 20, 0, 0, 0, 194, 3, 0, 0, 0, 1, 1, 48, 240, 48, 1, 0, 0, 0, 0, 17, 3, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 
@@ -1133,6 +1157,269 @@ uint8_t Tastenwahl(uint16_t Tastaturwert)
 }
  // tastenwahl
 
+ // von Mill32
+void OSZIA_HI(void)
+{
+   digitalWriteFast(OSZI_PULS_A, HIGH); 
+}
+void OSZIA_LO(void)
+{
+   digitalWriteFast(OSZI_PULS_A, LOW); 
+}
+
+uint16_t readTastatur(void)
+{
+   uint16_t adctastenwert = adc->adc0->analogRead(TASTATURPIN);
+   if (adctastenwert > 10)
+   {
+      //Serial.printf("readTastatur adctastenwert: %d\n",adctastenwert);
+      return adctastenwert;
+   }
+   return 0;
+}
+
+
+void tastenfunktion(uint16_t Tastenwert)
+{
+   
+   if (Tastenwert>23) // ca Minimalwert der Matrix
+   {
+      //         wdt_reset();
+      
+        tastaturcounter++;
+      if (tastaturcounter>=40)   //   Prellen
+      {
+         tastaturcounter=0x00;
+         if (analogtastaturstatus & (1<<TASTE_ON)) // 
+         {
+            
+         }
+         else 
+         {
+            analogtastaturstatus |= (1<<TASTE_ON);
+            
+            Taste=Tastenwahl(Tastenwert);
+            Serial.printf("Tastenwert: %d Taste: %d \n",Taste,Tastenwert);
+            tastaturcounter=0;
+            Tastenwert=0x00;
+            
+            uint8_t inBytes[4]={};
+            
+            switch (Taste)
+            {
+               case 0://
+               { 
+                  Serial.printf("Taste 0\n");
+                  break;
+                  // Blinken auf C2
+                  
+               }
+                  break;
+                  
+                  
+               case 1: 
+               {
+                  Serial.printf("Taste 1\n");
+                  //motor_C.setTargetAbs(800);
+                  digitalWriteFast(MC_EN,LOW);
+                  //controller.move(motor_C);
+                  
+               }
+                  break;
+                  
+               case 2:     // up                             //   Menu vorwaertsschalten   
+               {
+                  //uint8_t lage = AbschnittLaden_TS(pfeil4);
+                  if (pfeiltastecode == 0)
+                  {
+                     pfeiltastecode = 2;
+                     pfeilimpulsdauer = STARTIMPULSDAUER;
+                     endimpulsdauer = TASTENENDIMPULSDAUER;
+                  }
+               }break;
+                  
+               case 3:   //
+               {
+                  //uint8_t lage = AbschnittLaden_TS(drillup);
+                  if (pfeiltastecode == 0)
+                  {
+                     pfeiltastecode = 22;
+                     pfeilimpulsdauer = STARTIMPULSDAUER;
+                     endimpulsdauer = TASTENENDIMPULSDAUER;
+                  }
+               }break;
+                  
+               case 4:   // left
+               {
+                  //uint8_t lage = AbschnittLaden_TS(pfeil3);
+                  Serial.printf("Tastatur  left\n");
+                  if (pfeiltastecode == 0)
+                  {
+                     pfeiltastecode = 3;
+                     pfeilimpulsdauer = STARTIMPULSDAUER+20;
+                     pfeilrampcounter = 0;
+                     endimpulsdauer = TASTENENDIMPULSDAUER;
+                  }
+                } break; // case Vortag
+                  
+                  
+               case 5:                        // Ebene tiefer
+               {
+                  Serial.printf("Taste 5\n");
+                  
+                  
+                 }            break;
+                  
+               case 6: // right
+               {
+                  //uint8_t lage = AbschnittLaden_TS(pfeil1);
+                  if (pfeiltastecode == 0)
+                  {
+                     
+                     pfeiltastecode = 1;
+                     pfeilimpulsdauer = STARTIMPULSDAUER;
+                     endimpulsdauer = TASTENENDIMPULSDAUER;
+                  }
+                   
+               } break; // case Folgetag
+                  
+                  /*
+               case 7:
+               {
+                  Serial.printf("\nTaste 7 \n");
+                  uint32_t pos_A = motor_A.getPosition();
+                  uint32_t pos_B = motor_B.getPosition();
+                  Serial.printf("pos A: %d pos B: %d\n",pos_A, pos_B);
+                  
+                  //motor_A.setTargetRel(-pos_A);
+                  //motor_B.setTargetRel(-pos_B);
+                  motor_A.setTargetAbs(0);
+                  motor_B.setTargetAbs(0);
+                  
+                  digitalWriteFast(MA_EN,LOW);
+                  digitalWriteFast(MB_EN,LOW);
+                  controller.move(motor_A, motor_B);
+                  
+               }
+                  break;
+                  */
+                  
+               case 8:    // down                                //Menu rueckwaertsschalten
+               {
+                  //uint8_t lage = AbschnittLaden_TS(pfeil2);
+                  if (pfeiltastecode == 0)
+                  {
+                     pfeiltastecode = 4;
+                     pfeilimpulsdauer = STARTIMPULSDAUER;
+                     endimpulsdauer = TASTENENDIMPULSDAUER;
+                  }
+                  
+                    
+               }
+                  break;
+                  
+               case 9:
+               {
+                  //uint8_t lage = AbschnittLaden_TS(drilldown);
+                  if (pfeiltastecode == 0)
+                  {
+                     pfeiltastecode = 24;
+                     pfeilimpulsdauer = STARTIMPULSDAUER;
+                     endimpulsdauer = TASTENENDIMPULSDAUER;
+                  }
+                  
+               }
+                  
+                  break;
+                  /*
+               case 10: // set Nullpunkt
+               {
+                  Serial.printf("Taste 10\n");
+                  break;
+                  uint32_t pos_A = motor_A.getPosition();
+                  
+                  uint32_t pos_B = motor_B.getPosition();
+                  Serial.printf("vor reset: pos A: %d pos B: %d\n",pos_A, pos_B);
+                  
+                  motor_A.setPosition(0);
+                  motor_B.setPosition(0);
+                  
+                  pos_A = motor_A.getPosition();
+                  pos_B = motor_B.getPosition();
+                  Serial.printf("nach reset: pos A: %d pos B: %d\n",pos_A, pos_B);
+                  
+                  //motor_C.setTargetAbs(0);
+                  //digitalWriteFast(MC_EN,LOW);
+                  //controller.move(motor_C);
+                  
+               }break;
+               */
+              /*
+               case 12:// 
+               {
+                  //STOP
+                  
+                  stopTask(0);
+                  
+                  //Taste=99;
+                  
+                  //lcd_clr_line(1);
+                  //lcd_gotoxy(0,1);
+                  //lcd_puts("Taste 12\0");
+                  //delay_ms(100);
+                  //lcd_clr_line(1);
+                  switch (Menu_Ebene & 0xF0)
+                  {
+                     case 0x00:
+                     {
+                        
+                     }break;
+                        
+                     case 0x10:
+                     {
+                        Menu_Ebene = 0x00;                     //Ebene 0
+                        
+                     }break;
+                     case 0x20:
+                     {
+                        Menu_Ebene = 0x10;                     //   Ebene 1
+                        Menu_Ebene &= 0xF0;                     //   Bits 7 - 4 behalten, Bits 3-0 loeschen
+                        
+                     }break;
+                        
+                        
+                  }//switch MenuEbene
+                  
+                  
+               }break;
+                */  
+                  
+            }//switch Taste
+            
+         }
+         
+      }
+      
+   }
+   else 
+   {
+      if (analogtastaturstatus & (1<<TASTE_ON))
+      {
+         
+         pfeiltastecode = 0;
+         endimpulsdauer = ENDIMPULSDAUER;
+         //A0_ISR();  
+         digitalWriteFast(MA_EN,HIGH);
+         digitalWriteFast(MB_EN,HIGH);
+         digitalWriteFast(MC_EN,HIGH);
+         analogtastaturstatus &= ~(1<<TASTE_ON);
+         
+      }
+   }
+}
+
+
+
 void stopCNC(void)
 {
          Serial.printf("F1 reset\n");
@@ -1338,6 +1625,9 @@ Serial.print("Initializing SD card...");
    Serial.println("CNC_Mill_Slave_32_bres\n");
   */
  //tastaturstatus = 0xF0;
+
+  // von Mill32
+ pfeilimpulsdauer = STARTIMPULSDAUER;
 }
 
 // Add loop code
@@ -1345,6 +1635,133 @@ void loop()
 {
    //   Serial.println(steps);
    //   threads.delay(1000);
+
+
+// von Mill35
+
+   if (sincelastimpuls > pfeilimpulsdauer)
+   {
+
+      if (pfeilimpulsdauer > endimpulsdauer)
+      {
+         pfeilrampcounter ++;
+         if (pfeilrampcounter > RAMPDELAY) // delay für Impulsdauer reduzieren
+         {
+            pfeilrampcounter = 0;
+            pfeilimpulsdauer--;
+         }
+      }
+      
+      sincelastimpuls = 0;
+      
+      if (pfeiltastecode)
+      {
+         cncdelaycounter += 1;
+         
+         if (cncdelaycounter >9)
+         {
+            
+            OSZIA_HI();
+            
+            switch (pfeiltastecode)
+            {
+               case 1: // right
+               {
+                  //Serial.printf("loop  right\n");
+                  digitalWriteFast(MA_EN,LOW);
+                  digitalWriteFast(MA_RI,HIGH);
+                  digitalWriteFast(MA_STEP,LOW);
+                  //dx = schrittweite
+               }break;
+                  
+               case 2: // up
+               {
+                  //Serial.printf("loop  up\n");
+                  digitalWriteFast(MB_EN,LOW);
+                  digitalWriteFast(MB_RI,HIGH);
+                  digitalWriteFast(MB_STEP,LOW);
+                  //dy = schrittweite
+               }break;
+                   
+               case 3: // left
+               {
+                  //Serial.printf("loop  left\n");
+                  digitalWriteFast(MA_EN,LOW);
+                  digitalWriteFast(MA_RI,LOW);
+                  digitalWriteFast(MA_STEP,LOW);
+                  //dx = schrittweite * (-1)
+                  //vorzeichenx = 1
+               }break;
+                  
+               case 4: // down
+               {
+                  //Serial.printf("loop  down\n");
+                  digitalWriteFast(MB_EN,LOW);
+                  digitalWriteFast(MB_RI,LOW);
+                  digitalWriteFast(MB_STEP,LOW);
+                  //dy = schrittweite * (-1)
+                  //vorzeicheny = 1
+               }break;
+                  
+               case 22: // Drill UP
+               {
+                  digitalWriteFast(MC_EN,LOW);
+                  digitalWriteFast(MC_RI,HIGH);
+                  digitalWriteFast(MC_STEP,LOW);
+                  //Serial.printf("loop  Drill UP\n");
+                  //dz = schrittweite 
+                  
+               }break;  
+                  
+               case 24: // Drill DOWN
+               {
+                  digitalWriteFast(MC_EN,LOW);
+                  digitalWriteFast(MC_RI,LOW);
+                  digitalWriteFast(MC_STEP,LOW);
+                  //Serial.printf("loop  Drill DOWN\n");
+                  //dz = schrittweite * (-1)
+                  //vorzeichenz = 1
+               }break;  
+                  
+                 
+               case 26: // Drill StepDOWN
+               {
+                  digitalWriteFast(MC_EN,LOW);
+                  Serial.printf("loop  Drill STEP UP\n");
+                  //dz = drillwegFeld.integerValue
+                  //vorzeichenz = 1
+                  //mausstatus |= (1<<2);
+               }break;   
+                  
+               case 28: // Drill StepUP
+               {
+                  digitalWriteFast(MC_EN,LOW);
+                  Serial.printf("loop  Drill STEP DOWN\n");
+                  //dz = drillwegFeld.integerValue * (-1)
+                  //mausstatus |= (1<<2);
+               }break;
+                  
+                  
+            }// switch pfeiltag
+
+         }
+         if (cncdelaycounter > 10)
+         {
+            
+            cncdelaycounter = 0;
+            OSZIA_LO();
+            digitalWriteFast(MA_STEP,HIGH);
+            digitalWriteFast(MB_STEP,HIGH);
+            digitalWriteFast(MC_STEP,HIGH);
+            
+            
+            
+         }
+      } // if (pfeiltastecode)
+
+   }// if (sincelastimpuls
+
+
 
    if (sinceblink > 1000)
    {
