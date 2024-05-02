@@ -49,8 +49,6 @@
 
 
 
-#define TASTE0            0   // HALT-Bit Motor A
-#define TASTE1            1
 
 
 #define STEPDUR 250
@@ -183,6 +181,18 @@
 #define TASTE0     946
 #define TASTER     993
 */
+// von Mill32
+
+#define OSZI_PULS_A        9
+
+
+#define STARTIMPULSDAUER   100 // Beginn Rampe
+#define ENDIMPULSDAUER     20
+#define TASTENENDIMPULSDAUER     20
+
+#define RAMPSCHRITT        4
+# define RAMPDELAY 80 // delay fuerr Reduktion Impulsdauer
+
 #define TASTEX  10
 #define TASTE1  56
 #define TASTE2  78
