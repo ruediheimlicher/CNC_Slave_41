@@ -652,7 +652,7 @@ uint8_t AbschnittLaden_bres(uint8_t *AbschnittDaten) // 22us
    CounterC = DelayC;
 
    // Motor D
-   digitalWriteFast(MD_EN, LOW); // CounterD=0;
+   //digitalWriteFast(MD_EN, LOW); // CounterD=0;
    dataL = 0;
    dataH = 0;
 
@@ -665,14 +665,14 @@ uint8_t AbschnittLaden_bres(uint8_t *AbschnittDaten) // 22us
    if (dataH & (0x80)) // Bit 7 gesetzt, negative zahl
    {
       richtung |= (1 << RICHTUNG_D); // Rueckwarts
-      digitalWriteFast(MD_RI, LOW);
+      //digitalWriteFast(MD_RI, LOW);
       // // Serial.printf("AbschnittLaden_bres D negativ\n");
       // lcd_putc('r');
    }
    else
    {
       richtung &= ~(1 << RICHTUNG_D);
-      digitalWriteFast(MD_RI, HIGH);
+      //digitalWriteFast(MD_RI, HIGH);
       // // Serial.printf("AbschnittLaden_bres D positiv\n");
    }
 
@@ -910,8 +910,8 @@ void AnschlagVonMotor(const uint8_t motor)
                {
                   // Serial.printf("Stepperport 2\n");
                   //    STEPPERPORT_2 |= (1<<(MA_EN + motor));     // Motor 2,3 OFF
-                  digitalWriteFast(MC_EN, HIGH);
-                  digitalWriteFast(MD_EN, HIGH); // Paralleler Motor 0,1 OFF
+                  //digitalWriteFast(MC_EN, HIGH);
+                  //digitalWriteFast(MD_EN, HIGH); // Paralleler Motor 0,1 OFF
                   StepCounterC = 0;
                   StepCounterD = 0;
                   xA = 0;
@@ -987,7 +987,7 @@ void AnschlagVonMotor(const uint8_t motor)
                digitalWriteFast(MA_EN, HIGH);
                digitalWriteFast(MB_EN, HIGH);
                digitalWriteFast(MC_EN, HIGH);
-               digitalWriteFast(MD_EN, HIGH);
+               //digitalWriteFast(MD_EN, HIGH);
             }
 
             sendbuffer[5] = (abschnittnummer & 0xFF00) >> 8;
@@ -1620,12 +1620,12 @@ void setup()
    pinMode(END_A0_PIN, INPUT); //
    pinMode(END_B0_PIN, INPUT); //
    pinMode(END_C0_PIN, INPUT); //
-   pinMode(END_D0_PIN, INPUT); //
+   //pinMode(END_D0_PIN, INPUT); //
 
    pinMode(END_A0_PIN, INPUT_PULLUP); // HI
    pinMode(END_B0_PIN, INPUT_PULLUP); //
    pinMode(END_C0_PIN, INPUT_PULLUP); //
-   pinMode(END_D0_PIN, INPUT_PULLUP); //
+   //pinMode(END_D0_PIN, INPUT_PULLUP); //
 
    if (TEST)
    {
@@ -1967,13 +1967,14 @@ void loop()
        }
       if(taskstatus & (1<<TASK))
       {
-         
+         OSZIB_LO();
       }
       else 
       {
+         
          if (taskstatus & (1<<RUNNING))
          {
-            OSZIB_LO();
+            OSZIB_HI();
             taskstatus &= ~(1<<RUNNING);
             //stopCNC();
 
@@ -1981,7 +1982,7 @@ void loop()
       }
       
       //Taste = 0;
-   OSZIB_HI();
+   
    }// sincelaststep > 500
  
    ////#pragma mark start_(usb
@@ -2865,7 +2866,7 @@ void loop()
       // Serial.printf("Motor C an C0\n");
       AnschlagVonMotor(2);
    }
-
+/*
    // #pragma mark Anschlag   Motor D
    //  ***************
    //  * Anschlag Motor D *
@@ -2885,7 +2886,7 @@ void loop()
       // Serial.printf("Motor D an D0\n");
       AnschlagVonMotor(3);
    }
-
+*/
    // #pragma mark Motor A B
    // // Serial.printf("deltafastdirectionA: %d deltafastdirectionB: %d  \n",deltafastdirectionA,deltafastdirectionB);
 
@@ -3094,7 +3095,7 @@ void loop()
                   sendbuffer[22] = cncstatus;
                   usb_rawhid_send((void *)sendbuffer, 0);
                   tastaturstatus = 0xF0 ;
-                  taskstatus &= ~(1<<TASK);
+                  //taskstatus &= ~(1<<TASK);
                   // sei();
                }
                else
@@ -3392,7 +3393,7 @@ void loop()
             }
             if (stepdurD == 0)
             {
-               //digitalWriteFast(MD_STEP, HIGH);
+               digitalWriteFast(MD_STEP, HIGH);
             }
          }
          */
@@ -3405,6 +3406,7 @@ void loop()
                digitalWriteFast(MC_EN, HIGH);
             }
          }
+         /*
          if ((yB == 0))
          {
             if (digitalReadFast(MD_EN) == 0)
@@ -3414,6 +3416,7 @@ void loop()
                digitalWriteFast(MD_EN, HIGH);
             }
          }
+         */
       }
    }
    // // Serial.printf("G\n");

@@ -40,11 +40,11 @@
 // 10,11,12: SPI
 // #define MD_STEP            9           // PIN auf Stepperport 2
 // 18, 19: I2C
-#define MD_RI              10
-#define MD_EN              30
+//#define MD_RI              10
+//#define MD_EN              30
 
 #define END_C0_PIN         16          // Anschlagstatus:  Bit fuer Endanschlag bei C0
-#define END_D0_PIN         17         // Anschlagstatus:  Bit fuer Endanschlag bei D0
+//#define END_D0_PIN         17         // Anschlagstatus:  Bit fuer Endanschlag bei D0
 
 
 
@@ -117,7 +117,7 @@
 #define FIRSTBIT           7
 
 
-#define OSZI_PULS_A        8
+#define OSZI_PULS_A        17
 #define OSZI_PULS_B        10
 #define OSZI_PULS_C        11
 #define OSZI_PULS_D        41
