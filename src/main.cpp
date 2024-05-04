@@ -1235,7 +1235,7 @@ void tastenfunktion(uint16_t Tastenwert)
                   //uint8_t lage = AbschnittLaden_TS(pfeil4);
                   if (pfeiltastecode == 0)
                   {
-                     //OSZIA_LO();
+                     OSZIB_LO();
                      pfeiltastecode = 2;
                      pfeilimpulsdauer = STARTIMPULSDAUER;
                      endimpulsdauer = TASTENENDIMPULSDAUER;
@@ -1399,9 +1399,9 @@ void tastenfunktion(uint16_t Tastenwert)
                 */  
                   
             }//switch Taste
-            
+            OSZIB_HI();
          }
-         OSZIA_HI(); 
+         //OSZIA_HI(); 
       }
      
    }
@@ -1955,7 +1955,7 @@ void loop()
        tastencounter++;
        if (tastencounter > 10)
        {
-         //OSZIA_LO();
+         
       // Tastatur lesen
          tastenwert = readTastatur(); //adc->adc0->analogRead(TASTATURPIN);
          //tastenwert = 99;
@@ -1963,18 +1963,18 @@ void loop()
       
          Taste = Tastenwahl(tastenwert);
          tastenfunktion(tastenwert);
-         //OSZIA_HI();
+         
        }
       if(taskstatus & (1<<TASK))
       {
-         OSZIB_LO();
+         //OSZIB_LO();
       }
       else 
       {
          
          if (taskstatus & (1<<RUNNING))
          {
-            OSZIB_HI();
+            //OSZIB_HI();
             taskstatus &= ~(1<<RUNNING);
             //stopCNC();
 
