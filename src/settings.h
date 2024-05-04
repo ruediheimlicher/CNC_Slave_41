@@ -38,7 +38,7 @@
 #define DC_PWM              22
 
 // 10,11,12: SPI
- #define MD_STEP            9           // PIN auf Stepperport 2
+// #define MD_STEP            9           // PIN auf Stepperport 2
 // 18, 19: I2C
 #define MD_RI              10
 #define MD_EN              30
@@ -76,7 +76,7 @@
 #define RICHTUNG_C   2
 #define RICHTUNG_D   3
 
-#define MOTOR_A 0
+#define MOTOR_A     0
 #define MOTOR_B 1
 #define MOTOR_C 2
 #define MOTOR_D 3
@@ -117,9 +117,9 @@
 #define FIRSTBIT           7
 
 
-#define OSZI_PULS_A        38
-#define OSZI_PULS_B        39
-#define OSZI_PULS_C        40
+#define OSZI_PULS_A        8
+#define OSZI_PULS_B        10
+#define OSZI_PULS_C        11
 #define OSZI_PULS_D        41
 
 
@@ -201,14 +201,13 @@
 
 // von Mill32
 
-#define OSZI_PULS_A        9
+//#define OSZI_PULS_A        9
 
 
 #define STARTIMPULSDAUER   100 // Beginn Rampe
 #define ENDIMPULSDAUER     20
 #define TASTENENDIMPULSDAUER     20
 
-#define RAMPSCHRITT        4
 # define RAMPDELAY 80 // delay fuerr Reduktion Impulsdauer
 
 
