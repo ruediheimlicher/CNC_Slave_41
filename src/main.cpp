@@ -330,7 +330,9 @@ volatile uint8_t tastaturstep = 0xFF; // aktiver Port bei Tastendruck
 volatile uint16_t           pfeilimpulsdauer = 0;
 volatile uint16_t           pfeilrampcounter = 0;
 volatile uint16_t           pfeilrampdelay = 0;
-volatile uint8_t            endimpulsdauer = ENDIMPULSDAUER;
+volatile uint16_t            endimpulsdauer = ENDIMPULSDAUER;
+volatile uint16_t            rampimpulsdauer = TASTENSTARTIMPULSDAUER;
+
 
 
 
@@ -447,11 +449,16 @@ void kanalimpulsfunktion(void)
 }
 
 
-void tastaturtimerFunktion() // STARTIMPULSDAUER
+void tastaturtimerFunktion() // TASTENSTARTIMPULSDAUER
 {
    OSZIB_LO();
    kanalimpulsTimer.begin(kanalimpulsfunktion,IMPULSBREITE); // neuer Kanalimpuls
    digitalWriteFast(tastaturstep,LOW);
+   if(rampimpulsdauer > (TASTENENDIMPULSDAUER + RAMPDELAY))
+   {
+      rampimpulsdauer -= RAMPDELAY;
+      tastaturTimer.update(rampimpulsdauer);
+   }
 
 }
 
@@ -1262,7 +1269,7 @@ void tastenfunktion(uint16_t Tastenwert)
                   {
                      OSZIB_LO();
                      pfeiltastecode = 2;
-                     pfeilimpulsdauer = STARTIMPULSDAUER;
+                     pfeilimpulsdauer = TASTENSTARTIMPULSDAUER;
                      endimpulsdauer = TASTENENDIMPULSDAUER;
                      
                      tastaturstep = MB_STEP;
@@ -1283,7 +1290,7 @@ void tastenfunktion(uint16_t Tastenwert)
                   if (pfeiltastecode == 0)
                   {
                      pfeiltastecode = 22;
-                     pfeilimpulsdauer = STARTIMPULSDAUER;
+                     pfeilimpulsdauer = TASTENSTARTIMPULSDAUER;
                      endimpulsdauer = TASTENENDIMPULSDAUER;
                   }
                }break;
@@ -1295,7 +1302,7 @@ void tastenfunktion(uint16_t Tastenwert)
                   if (pfeiltastecode == 0)
                   {
                      pfeiltastecode = 3;
-                     pfeilimpulsdauer = STARTIMPULSDAUER+20;
+                     pfeilimpulsdauer = TASTENSTARTIMPULSDAUER+20;
                      pfeilrampcounter = 0;
                      endimpulsdauer = TASTENENDIMPULSDAUER;
                      tastaturstep = MA_STEP;
@@ -1323,7 +1330,7 @@ void tastenfunktion(uint16_t Tastenwert)
                   {
                      
                      pfeiltastecode = 1;
-                     pfeilimpulsdauer = STARTIMPULSDAUER;
+                     pfeilimpulsdauer = TASTENSTARTIMPULSDAUER;
                      endimpulsdauer = TASTENENDIMPULSDAUER;
                      tastaturstep = MA_STEP;
 
@@ -1362,7 +1369,7 @@ void tastenfunktion(uint16_t Tastenwert)
                   if (pfeiltastecode == 0)
                   {
                      pfeiltastecode = 4;
-                     pfeilimpulsdauer = STARTIMPULSDAUER;
+                     pfeilimpulsdauer = TASTENSTARTIMPULSDAUER;
                      endimpulsdauer = TASTENENDIMPULSDAUER;
 
                      tastaturstep = MB_STEP;
@@ -1383,7 +1390,7 @@ void tastenfunktion(uint16_t Tastenwert)
                   if (pfeiltastecode == 0)
                   {
                      pfeiltastecode = 24;
-                     pfeilimpulsdauer = STARTIMPULSDAUER;
+                     pfeilimpulsdauer = TASTENSTARTIMPULSDAUER;
                      endimpulsdauer = TASTENENDIMPULSDAUER;
                   }
                   
@@ -1460,7 +1467,8 @@ void tastenfunktion(uint16_t Tastenwert)
             {
                 //OSZIA_HI();
                tastaturimpulscounter = 0;
-               tastaturTimer.begin(tastaturtimerFunktion,3000);
+               tastaturTimer.begin(tastaturtimerFunktion,TASTENSTARTIMPULSDAUER);
+               rampimpulsdauer = TASTENSTARTIMPULSDAUER;
 
             }
          }
@@ -1786,7 +1794,7 @@ Serial.print("Initializing SD card...");
  //tastaturstatus = 0xF0;
 
   // von Mill32
- pfeilimpulsdauer = STARTIMPULSDAUER;
+ pfeilimpulsdauer = TASTENSTARTIMPULSDAUER;
  taskstatus = 0;
 }
 
