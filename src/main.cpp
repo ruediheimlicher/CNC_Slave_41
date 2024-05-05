@@ -290,6 +290,7 @@ int16_t lastday = 0;
 // Create an IntervalTimer object
 IntervalTimer delayTimer;
 
+
 uint16_t errarray[1024];
 uint16_t errpos = 0;
 // Utilities
@@ -318,6 +319,11 @@ uint16_t TastenStatus=0;
 uint16_t Tastenprellen=0x1F;
 uint8_t oldTaste = 0;
 uint8_t            pfeiltastecode = 0;
+// IntervalTimer for Tastatur
+IntervalTimer tastaturTimer;
+volatile uint16_t tastaturimpulscounter = 0; // PWM fuer Tastaturimpulse
+volatile uint8_t tastaturmotorport = 0xFF; // aktiver Port bei Tastendruck
+volatile uint8_t tastaturstep = 0xFF; // aktiver Port bei Tastendruck
 
 // von Mill35
 volatile uint16_t           pfeilimpulsdauer = 0;
@@ -433,6 +439,62 @@ void delaytimerfunction(void) // 1us ohne ramp
    }
    // OSZIA_HI();
 }
+
+
+void tastaturtimerFunktion()
+{
+   //OSZIB_TOGG();
+   OSZIA_LO();
+   //
+   /*
+   switch (tastaturimpulscounter)
+   {
+      case 0: // Impuls ON
+      {
+         OSZIB_LO();
+         //digitalWriteFast(tastaturmotorport,LOW);
+      }
+      break;
+      case 5: // Impuls OFF
+      {
+         OSZIB_HI();
+         //digitalWriteFast(tastaturmotorport,HIGH);
+      }
+      break;
+      default:
+      break;
+    
+   }
+   */
+  if(tastaturimpulscounter == 1)
+  {
+   OSZIB_LO();
+   //digitalWriteFast(tastaturmotorport,LOW);
+   digitalWriteFast(tastaturstep,LOW);
+
+  }
+  else 
+  if (tastaturimpulscounter == 20)
+  {
+   OSZIB_HI();
+   //digitalWriteFast(tastaturmotorport,HIGH);
+   digitalWriteFast(tastaturstep,HIGH);
+  }
+
+   if (tastaturimpulscounter > 50)
+   {
+            tastaturimpulscounter = 0;
+   }
+   else 
+   {
+      tastaturimpulscounter++;
+   }
+   OSZIA_HI();
+
+   
+}
+
+
 
 // MARK: mark AbschnittLaden_bres
 uint8_t AbschnittLaden_bres(uint8_t *AbschnittDaten) // 22us
@@ -1181,6 +1243,7 @@ uint16_t readTastatur(void)
 
 void tastenfunktion(uint16_t Tastenwert)
 {
+   
    if (Tastenwert>23) // ca Minimalwert der Matrix
    {
       //         wdt_reset();
@@ -1191,22 +1254,22 @@ void tastenfunktion(uint16_t Tastenwert)
       {
          
          tastaturcounter=0x00;
-         if (analogtastaturstatus & (1<<TASTE_ON)) // Taste gedrueckt
+         if (analogtastaturstatus & (1<<TASTE_ON)) // Taste schon gedrueckt
          {
             //OSZIC_HI();
          }
-         else 
+         else // Taste neu gedrückt
          {
             //OSZIC_LO();
-            //OSZIA_LO();
-            analogtastaturstatus |= (1<<TASTE_ON);
+            OSZIA_LO();
+            analogtastaturstatus |= (1<<TASTE_ON); // nur einmal
             
             Taste=Tastenwahl(Tastenwert);
             // Serial.printf("Tastenwert: %d Taste: %d \n",Taste,Tastenwert);
             tastaturcounter=0;
             Tastenwert=0x00;
             
-            uint8_t inBytes[4]={};
+            
             
             switch (Taste)
             {
@@ -1239,6 +1302,16 @@ void tastenfunktion(uint16_t Tastenwert)
                      pfeiltastecode = 2;
                      pfeilimpulsdauer = STARTIMPULSDAUER;
                      endimpulsdauer = TASTENENDIMPULSDAUER;
+                     
+                     tastaturstep = MB_STEP;
+
+                     digitalWriteFast(MB_EN,LOW);
+                     digitalWriteFast(MB_RI,HIGH);
+
+                     //digitalWriteFast(MB_STEP,LOW);
+
+
+
                   }
                }break;
                   
@@ -1263,6 +1336,13 @@ void tastenfunktion(uint16_t Tastenwert)
                      pfeilimpulsdauer = STARTIMPULSDAUER+20;
                      pfeilrampcounter = 0;
                      endimpulsdauer = TASTENENDIMPULSDAUER;
+                     tastaturstep = MA_STEP;
+
+                     digitalWriteFast(MA_EN,LOW);
+                     digitalWriteFast(MA_RI,LOW);
+                     
+                     //digitalWriteFast(MA_STEP,LOW);
+
                   }
                 } break; // case Vortag
                   
@@ -1283,6 +1363,12 @@ void tastenfunktion(uint16_t Tastenwert)
                      pfeiltastecode = 1;
                      pfeilimpulsdauer = STARTIMPULSDAUER;
                      endimpulsdauer = TASTENENDIMPULSDAUER;
+                     tastaturstep = MA_STEP;
+
+                     digitalWriteFast(MA_RI,HIGH);
+                     digitalWriteFast(MA_EN,LOW);
+
+                     //digitalWriteFast(MA_STEP,LOW);
                   }
                    
                } break; // case Folgetag
@@ -1316,6 +1402,13 @@ void tastenfunktion(uint16_t Tastenwert)
                      pfeiltastecode = 4;
                      pfeilimpulsdauer = STARTIMPULSDAUER;
                      endimpulsdauer = TASTENENDIMPULSDAUER;
+
+                     tastaturstep = MB_STEP;
+
+                     digitalWriteFast(MB_EN,LOW);
+                     digitalWriteFast(MB_RI,LOW);
+
+                     //digitalWriteFast(MB_STEP,LOW);
                   }
                   
                     
@@ -1400,8 +1493,17 @@ void tastenfunktion(uint16_t Tastenwert)
                   
             }//switch Taste
             OSZIB_HI();
+            // Tastaturtimer starten
+            if (pfeiltastecode > 0)
+            {
+                OSZIA_HI();
+               tastaturimpulscounter = 0;
+               tastaturTimer.begin(tastaturtimerFunktion,1*STARTIMPULSDAUER);
+
+            }
          }
-         //OSZIA_HI(); 
+         OSZIA_HI(); 
+         
       }
      
    }
@@ -1413,9 +1515,13 @@ void tastenfunktion(uint16_t Tastenwert)
          pfeiltastecode = 0;
          endimpulsdauer = ENDIMPULSDAUER;
          //A0_ISR();  
-         digitalWriteFast(MA_EN,HIGH);
-         digitalWriteFast(MB_EN,HIGH);
-         digitalWriteFast(MC_EN,HIGH);
+            digitalWriteFast(MA_EN,HIGH);
+            digitalWriteFast(MB_EN,HIGH);
+            digitalWriteFast(MC_EN,HIGH);
+            digitalWriteFast(MA_STEP,HIGH);
+            digitalWriteFast(MB_STEP,HIGH);
+            digitalWriteFast(MC_STEP,HIGH);
+
     
          analogtastaturstatus &= ~(1<<TASTE_ON);
          
@@ -1719,7 +1825,7 @@ Serial.print("Initializing SD card...");
 
   // von Mill32
  pfeilimpulsdauer = STARTIMPULSDAUER;
- taskstatus |= (1<<RUNNING);
+ taskstatus = 0;
 }
 
 // Add loop code
@@ -1727,9 +1833,9 @@ void loop()
 {
    //   Serial.println(steps);
    //   threads.delay(1000);
-
+//tastaturimpulscounter++;
 // von Mill35
-
+/*
    if (sincelastimpuls > pfeilimpulsdauer)
    {
    
@@ -1744,7 +1850,7 @@ void loop()
       }
       
       sincelastimpuls = 0;
-      pfeiltastecode = 0;
+      //pfeiltastecode = 0;
       if (pfeiltastecode)
       {
          
@@ -1857,7 +1963,7 @@ void loop()
       } // if (pfeiltastecode)
       //OSZIB_HI();
    }// if (sincelastimpuls
-
+*/
 
 
    if (sinceblink > 1000)
@@ -1939,32 +2045,30 @@ void loop()
    if (sincelaststep > 50) // 60 us
    {
       
-
-
          if (analogtastaturstatus & (1<<TASTE_ON)) // Taste gedrueckt
          {
             OSZIC_LO();
+             
          }
          else 
-         {
+         { 
+            tastaturTimer.end();
+            /*
+            digitalWriteFast(MA_EN,HIGH);
+            digitalWriteFast(MB_EN,HIGH);
+            digitalWriteFast(MC_EN,HIGH);
+            digitalWriteFast(MA_STEP,HIGH);
+            digitalWriteFast(MB_STEP,HIGH);
+            digitalWriteFast(MC_STEP,HIGH);
+            */
             OSZIC_HI();
          }
   
       // // Serial.printf("sincelaststep\n");
       sincelaststep = 0;
-       tastencounter++;
-       if (tastencounter > 10)
-       {
-         
-      // Tastatur lesen
-         tastenwert = readTastatur(); //adc->adc0->analogRead(TASTATURPIN);
-         //tastenwert = 99;
-         oldTaste = Taste;
-      
-         Taste = Tastenwahl(tastenwert);
-         tastenfunktion(tastenwert);
-         
-       }
+
+
+    
       if(taskstatus & (1<<TASK))
       {
          //OSZIB_LO();
@@ -1976,9 +2080,45 @@ void loop()
          {
             //OSZIB_HI();
             taskstatus &= ~(1<<RUNNING);
-            //stopCNC();
-
+            //
+      
          }
+         else 
+         {
+            
+            //
+          
+         
+         {
+           
+         }
+            tastencounter++;
+            if (tastencounter > 10)
+            {
+               //OSZIA_LO();
+               // Tastatur lesen
+               tastenwert = readTastatur(); //adc->adc0->analogRead(TASTATURPIN);
+               //tastenwert = 99;
+
+               // repetition erkennen
+               oldTaste = Taste; 
+               //uint8_t newTaste = Tastenwahl(tastenwert);
+               // if((oldTaste == 0) || (newTaste != oldTaste)) // andere Taste
+               {
+ 
+                  //Taste = newTaste;
+                  tastenfunktion(tastenwert);
+
+               }
+               
+                  
+               }
+            
+            //OSZIA_HI();
+         }
+
+
+
       }
       
       //Taste = 0;
