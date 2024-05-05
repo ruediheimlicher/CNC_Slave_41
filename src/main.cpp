@@ -321,6 +321,7 @@ uint8_t oldTaste = 0;
 uint8_t            pfeiltastecode = 0;
 // IntervalTimer for Tastatur
 IntervalTimer tastaturTimer;
+IntervalTimer kanalimpulsTimer;
 volatile uint16_t tastaturimpulscounter = 0; // PWM fuer Tastaturimpulse
 volatile uint8_t tastaturmotorport = 0xFF; // aktiver Port bei Tastendruck
 volatile uint8_t tastaturstep = 0xFF; // aktiver Port bei Tastendruck
@@ -422,7 +423,6 @@ void stopTimer2(void)
 
 void delaytimerfunction(void) // 1us ohne ramp
 {
-   // OSZIA_TOGG(); // 100us
    if (timerstatus & (1 << TIMER_ON))
    {
       // OSZIA_LO(); // 100us
@@ -437,62 +437,25 @@ void delaytimerfunction(void) // 1us ohne ramp
          bres_delayB -= 1;
       }
    }
-   // OSZIA_HI();
+}
+
+void kanalimpulsfunktion(void)
+{
+   OSZIB_HI();
+   digitalWriteFast(tastaturstep,HIGH);
+   kanalimpulsTimer.end();
 }
 
 
-void tastaturtimerFunktion()
+void tastaturtimerFunktion() // STARTIMPULSDAUER
 {
-   //OSZIB_TOGG();
-   OSZIA_LO();
-   //
-   /*
-   switch (tastaturimpulscounter)
-   {
-      case 0: // Impuls ON
-      {
-         OSZIB_LO();
-         //digitalWriteFast(tastaturmotorport,LOW);
-      }
-      break;
-      case 5: // Impuls OFF
-      {
-         OSZIB_HI();
-         //digitalWriteFast(tastaturmotorport,HIGH);
-      }
-      break;
-      default:
-      break;
-    
-   }
-   */
-  if(tastaturimpulscounter == 1)
-  {
    OSZIB_LO();
-   //digitalWriteFast(tastaturmotorport,LOW);
+   kanalimpulsTimer.begin(kanalimpulsfunktion,IMPULSBREITE); // neuer Kanalimpuls
    digitalWriteFast(tastaturstep,LOW);
 
-  }
-  else 
-  if (tastaturimpulscounter == 20)
-  {
-   OSZIB_HI();
-   //digitalWriteFast(tastaturmotorport,HIGH);
-   digitalWriteFast(tastaturstep,HIGH);
-  }
-
-   if (tastaturimpulscounter > 50)
-   {
-            tastaturimpulscounter = 0;
-   }
-   else 
-   {
-      tastaturimpulscounter++;
-   }
-   OSZIA_HI();
-
-   
 }
+
+
 
 
 
@@ -1256,11 +1219,10 @@ void tastenfunktion(uint16_t Tastenwert)
          tastaturcounter=0x00;
          if (analogtastaturstatus & (1<<TASTE_ON)) // Taste schon gedrueckt
          {
-            //OSZIC_HI();
+            //();
          }
          else // Taste neu gedrückt
          {
-            //OSZIC_LO();
             OSZIA_LO();
             analogtastaturstatus |= (1<<TASTE_ON); // nur einmal
             
@@ -1496,9 +1458,9 @@ void tastenfunktion(uint16_t Tastenwert)
             // Tastaturtimer starten
             if (pfeiltastecode > 0)
             {
-                OSZIA_HI();
+                //OSZIA_HI();
                tastaturimpulscounter = 0;
-               tastaturTimer.begin(tastaturtimerFunktion,1*STARTIMPULSDAUER);
+               tastaturTimer.begin(tastaturtimerFunktion,3000);
 
             }
          }
@@ -1835,135 +1797,6 @@ void loop()
    //   threads.delay(1000);
 //tastaturimpulscounter++;
 // von Mill35
-/*
-   if (sincelastimpuls > pfeilimpulsdauer)
-   {
-   
-      if (pfeilimpulsdauer > endimpulsdauer)
-      {
-         pfeilrampcounter ++;
-         if (pfeilrampcounter > RAMPDELAY) // delay für Impulsdauer reduzieren
-         {
-            pfeilrampcounter = 0;
-            pfeilimpulsdauer--;
-         }
-      }
-      
-      sincelastimpuls = 0;
-      //pfeiltastecode = 0;
-      if (pfeiltastecode)
-      {
-         
-         cncdelaycounter += 1;
-         
-         if (cncdelaycounter >9)
-         {
-            interrupts();
-            //OSZIB_LO();
-             switch (pfeiltastecode)
-            {
-               case 1: // right
-               {
-                  //OSZIA_LO();
-                  //// Serial.printf("loop  right\n");
-                  digitalWriteFast(MA_EN,LOW);
-                  digitalWriteFast(MA_RI,HIGH);
-                  digitalWriteFast(MA_STEP,LOW);
-
-                  //dx = schrittweite
-               }break;
-                  
-               case 2: // up
-               {
-                  //OSZIA_LO();
-                  //// Serial.printf("loop  up\n");
-                  digitalWriteFast(MB_EN,LOW);
-                  digitalWriteFast(MB_RI,HIGH);
-                  digitalWriteFast(MB_STEP,LOW);
-
-                  //dy = schrittweite
-               }break;
-                   
-               case 3: // left
-               {
-                  //OSZIA_LO();
-                  //// Serial.printf("loop  left\n");
-                  digitalWriteFast(MA_EN,LOW);
-                  digitalWriteFast(MA_RI,LOW);
-                  digitalWriteFast(MA_STEP,LOW);
-                  //dx = schrittweite * (-1)
-                  //vorzeichenx = 1
-               }break;
-                  
-               case 4: // down
-               {
-                  //OSZIA_LO();
-                  //// Serial.printf("loop  down\n");
-                  digitalWriteFast(MB_EN,LOW);
-                  digitalWriteFast(MB_RI,LOW);
-                  digitalWriteFast(MB_STEP,LOW);
-                  //dy = schrittweite * (-1)
-                  //vorzeicheny = 1
-               }break;
-                  
-               case 22: // Drill UP
-               {
-                  digitalWriteFast(MC_EN,LOW);
-                  digitalWriteFast(MC_RI,HIGH);
-                  digitalWriteFast(MC_STEP,LOW);
-                  //// Serial.printf("loop  Drill UP\n");
-                  //dz = schrittweite 
-                  
-               }break;  
-                  
-               case 24: // Drill DOWN
-               {
-                  digitalWriteFast(MC_EN,LOW);
-                  digitalWriteFast(MC_RI,LOW);
-                  digitalWriteFast(MC_STEP,LOW);
-                  //// Serial.printf("loop  Drill DOWN\n");
-                  //dz = schrittweite * (-1)
-                  //vorzeichenz = 1
-               }break;  
-                  
-                 
-               case 26: // Drill StepDOWN
-               {
-                  digitalWriteFast(MC_EN,LOW);
-                  // Serial.printf("loop  Drill STEP UP\n");
-                  //dz = drillwegFeld.integerValue
-                  //vorzeichenz = 1
-                  //mausstatus |= (1<<2);
-               }break;   
-                  
-               case 28: // Drill StepUP
-               {
-                  digitalWriteFast(MC_EN,LOW);
-                  // Serial.printf("loop  Drill STEP DOWN\n");
-                  //dz = drillwegFeld.integerValue * (-1)
-                  //mausstatus |= (1<<2);
-               }break;
-                  
-                  
-            }// switch pfeiltag
-
-         }
-         if (cncdelaycounter > 50)
-         {
-            
-            cncdelaycounter = 0;
-            //OSZIA_HI();
-            digitalWriteFast(MA_STEP,HIGH);
-            digitalWriteFast(MB_STEP,HIGH);
-            digitalWriteFast(MC_STEP,HIGH);
-            
-            
-            
-         }
-      } // if (pfeiltastecode)
-      //OSZIB_HI();
-   }// if (sincelastimpuls
-*/
 
 
    if (sinceblink > 1000)

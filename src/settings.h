@@ -204,9 +204,11 @@
 //#define OSZI_PULS_A        9
 
 
-#define STARTIMPULSDAUER   100 // Beginn Rampe
+#define STARTIMPULSDAUER   1000 // Beginn Rampe
 #define ENDIMPULSDAUER     20
-#define TASTENENDIMPULSDAUER     20
+#define TASTENENDIMPULSDAUER     100
+
+#define IMPULSBREITE  200
 
 # define RAMPDELAY 80 // delay fuerr Reduktion Impulsdauer
 
