@@ -308,10 +308,13 @@ canal_struct indata;
 #define POTB_PIN     A8
 
 
-uint8_t joystickPinArray[4] = {};
-uint16_t joystickWertArray[4] = {};
-uint16_t joystickMitteArray[4] = {};
-uint8_t joystickindex = 0; // aktueller joystick, 0-3
+volatile uint8_t joystickPinArray[4] = {};
+volatile  uint16_t joystickWertArray[4] = {};
+volatile uint16_t joystickMitteArray[4] = {};
+volatile uint8_t joystickindex = 0; // aktueller joystick, 0-3
+volatile uint8_t adcindex = 0; // aktueller joystick, 0-3
+
+
 #define JOYSTICKSTAERIMPULS   400
 #define JOYSTICKIMPULS        150
 #define JOYSTICKTOTBEREICH    16
@@ -1241,9 +1244,11 @@ uint16_t readTastatur(void)
 void joysticktimerFunktion(void)
 {
    //return;
-   if(joystickindex % 2) // ungerade, Impuls
+   if(joystickindex % 2) // ungerade, Impuls, 1,3
    {
       OSZIB_HI();
+       OSZIC_HI();
+       OSZIA_HI();
      //ungerade, impulsabstand einstellen, PINs deaktivieren
    
       joysticktimer.update(JOYSTICKIMPULS);
@@ -1259,7 +1264,8 @@ void joysticktimerFunktion(void)
    else 
    {
       // Pulslaenge einstellen, PINs aktivieren
-      uint8_t tempindex = joystickindex & 0x03; 
+      uint8_t tempindex = joystickindex & 0x03; // 0,2
+
       uint16_t joystickwert =  joystickMitteArray[tempindex]; // Mitte
       uint16_t diff = 0;
       uint8_t richtung = 0; 
@@ -1296,7 +1302,7 @@ void joysticktimerFunktion(void)
          {
             case 0: // left right
             {
-               OSZIB_LO();
+               OSZIA_LO();
                digitalWriteFast(MA_STEP,LOW);
                digitalWriteFast(MA_EN,LOW);
                if(richtung & (1<<tempindex))
@@ -1309,28 +1315,51 @@ void joysticktimerFunktion(void)
                }
                //
             
-            }
-            break;
-            case 1: // up down
+            }break;
+            case 2: // up down
             {
-               //OSZIB_LO();
-               //digitalWriteFast(MA_EN,HIGH);
-               //digitalWriteFast(MA_STEP,LOW);
-               //digitalWriteFast(MA_EN,LOW);
-               //digitalWriteFast(MA_RI,HIGH);
-            }
-            break;
-      
+               
+               OSZIB_LO();
+               digitalWriteFast(MB_STEP,LOW);
+               digitalWriteFast(MB_EN,LOW);
+               if(richtung & (1<<tempindex))
+               {
+                  digitalWriteFast(MB_RI,LOW);
+               }
+               else
+               {
+                  digitalWriteFast(MB_RI,HIGH);
+               }
+               
+            }break;
+            /*
             case 2: // 
             {
+               OSZIC_LO();
+               
+               digitalWriteFast(MB_STEP,LOW);
+               digitalWriteFast(MB_EN,LOW);
+               if(richtung & (1<<tempindex))
+               {
+                  digitalWriteFast(MB_RI,LOW);
+               }
+               else
+               {
+                  digitalWriteFast(MB_RI,HIGH);
+               }
+ 
                //OSZIB_LO();
                //digitalWriteFast(MA_EN,HIGH);
                //digitalWriteFast(MB_EN,HIGH);
                //digitalWriteFast(MB_STEP,LOW);
                //digitalWriteFast(MB_EN,LOW);
                //digitalWriteFast(MB_RI,LOW);
+               
             }
+
             break;
+            */
+            
             case 3: // 
             {
                //OSZIB_LO();
@@ -1350,6 +1379,7 @@ void joysticktimerFunktion(void)
 
       }
       */
+      //joystickindex++;
    }
 
 
@@ -1813,6 +1843,7 @@ void setup()
    adc->adc0->setResolution(10);
    adc->adc0->setConversionSpeed(ADC_CONVERSION_SPEED::HIGH_SPEED);
    adc->adc0->setSamplingSpeed(ADC_SAMPLING_SPEED::HIGH_SPEED);
+   
    pinMode(DC_PWM, OUTPUT);
    // digitalWriteFast(DC_PWM, HIGH); // OFF
    digitalWriteFast(DC_PWM, 1);
@@ -1883,20 +1914,21 @@ void setup()
 
 
    joystickMitteArray[0] = fixjoystickMitteA(POTA_PIN);
-   joystickMitteArray[1] = fixjoystickMitteA(POTB_PIN);
+   joystickMitteArray[1] = fixjoystickMitteA(POTA_PIN);
    joystickMitteArray[2] = fixjoystickMitteA(POTA_PIN);
    joystickMitteArray[3] = fixjoystickMitteA(POTA_PIN);
 
    joystickWertArray[0] = joystickMitteArray[0];
    joystickWertArray[1] = joystickMitteArray[1];
-   joystickWertArray[2] = 100;//joystickMitteArray[2];
+   joystickWertArray[2] = joystickMitteArray[1];
    joystickWertArray[3] = 100;//joystickMitteArray[3]-100;
 
 
    joystickPinArray[0] = POTA_PIN;
-   joystickPinArray[1] = 0xFF;//POTB_PIN;
-   joystickPinArray[2] = 0xFF;
-   joystickPinArray[3] = 0xFF;
+
+   joystickPinArray[1] = POTB_PIN;
+   joystickPinArray[2] = POTB_PIN;
+   joystickPinArray[3] = POTB_PIN;
 
   // joysticktimer.begin(joysticktimerFunktion,JOYSTICKSTAERIMPULS);
 
@@ -2013,8 +2045,18 @@ void loop()
    {
       if(analogtastaturstatus & (1<<JOYSTIICK_ON))
       {
-         //joystickWertArray[joystickindex] = readJoystick(joystickPinArray[joystickindex & 0x03]);
+         if(adcindex%2 == 0)
+         {
+         //joystickWertArray[adcindex & 0x03] = readJoystick(joystickPinArray[adcindex & 0x03]);
         joystickWertArray[0] = readJoystick(joystickPinArray[0]);
+         }
+         else
+         {
+            joystickWertArray[2] = readJoystick(joystickPinArray[2]);
+         }
+        
+
+        adcindex++;
       }
       
       if (analogtastaturstatus & (1<<TASTE_ON)) // Taste gedrueckt
@@ -2050,18 +2092,10 @@ void loop()
          {
             //OSZIB_HI();
             taskstatus &= ~(1<<RUNNING);
-            //
       
          }
          else 
          {
-            
-            //
-          
-         
-         
-           
-         
             tastencounter++;
             //if (tastencounter > 10)
             {

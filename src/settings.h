@@ -35,7 +35,7 @@
  #define END_A0_PIN      20           // Bit fuer Endanschlag bei A0
  #define END_B0_PIN      21           // Bit fuer Endanschlag bei A1
  
-#define DC_PWM              22
+#define DC_PWM             9 // war 22
 
 // 10,11,12: SPI
 // #define MD_STEP            9           // PIN auf Stepperport 2
