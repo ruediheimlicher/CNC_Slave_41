@@ -304,6 +304,22 @@ canal_struct indata;
 
 // ADC
 #define TASTATURPIN  A9
+#define POTA_PIN     A1
+
+
+uint8_t joystickPinArray[4] = {};
+uint16_t joystickWertArray[4] = {};
+uint16_t joystickMitteArray[4] = {};
+uint8_t joystickindex = 0; // aktueller joystick, 0-3
+#define JOYSTICKSTAERIMPULS   400
+#define JOYSTICKIMPULS 200
+
+uint16_t potwertA = 0;
+uint8_t mitteA = 0;
+uint8_t minA = 0;
+uint8_t maxA = 0xFF;
+
+IntervalTimer joysticktimer;
 
 uint16_t tastenwert = 0;
 uint8_t Taste = 0;
@@ -315,6 +331,8 @@ uint8_t tastencounter = 0;
 uint8_t analogtastaturstatus = 0;
 #define TASTE_OFF  0
 #define TASTE_ON  1
+
+#define JOYSTIICK_ON  2
 uint16_t TastenStatus=0;
 uint16_t Tastenprellen=0x1F;
 uint8_t oldTaste = 0;
@@ -330,8 +348,8 @@ volatile uint8_t tastaturstep = 0xFF; // aktiver Port bei Tastendruck
 volatile uint16_t           pfeilimpulsdauer = 0;
 volatile uint16_t           pfeilrampcounter = 0;
 volatile uint16_t           pfeilrampdelay = 0;
-volatile uint16_t            endimpulsdauer = ENDIMPULSDAUER;
-volatile uint16_t            rampimpulsdauer = TASTENSTARTIMPULSDAUER;
+volatile uint16_t           endimpulsdauer = ENDIMPULSDAUER;
+volatile uint16_t           rampimpulsdauer = TASTENSTARTIMPULSDAUER;
 
 
 
@@ -449,7 +467,7 @@ void kanalimpulsfunktion(void)
 }
 
 
-void tastaturtimerFunktion() // TASTENSTARTIMPULSDAUER
+void tastaturtimerFunktion(void) // TASTENSTARTIMPULSDAUER
 {
    OSZIB_LO();
    kanalimpulsTimer.begin(kanalimpulsfunktion,IMPULSBREITE); // neuer Kanalimpuls
@@ -461,8 +479,6 @@ void tastaturtimerFunktion() // TASTENSTARTIMPULSDAUER
    }
 
 }
-
-
 
 
 
@@ -1197,6 +1213,16 @@ uint8_t Tastenwahl(uint16_t Tastaturwert)
 
 
 
+uint16_t readJoystick(uint8_t stick)
+{
+   uint16_t adctastenwert = adc->adc0->analogRead(stick);
+   if (adctastenwert > 10)
+   {
+      //// Serial.printf("readTastatur adctastenwert: %d\n",adctastenwert);
+      return adctastenwert;
+   }
+   return 0;
+}
 
 
 uint16_t readTastatur(void)
@@ -1208,6 +1234,74 @@ uint16_t readTastatur(void)
       return adctastenwert;
    }
    return 0;
+}
+void joysticktimerFunktion(void)
+{
+   //return;
+   if(joystickindex % 2) // ungerade, Impuls
+   {
+      OSZIB_HI();
+     //ungerade, impulsabstand einstellen, PINs deaktivieren
+   
+      joysticktimer.update(JOYSTICKIMPULS);
+      
+     // digitalWriteFast(MA_EN,HIGH);
+     // digitalWriteFast(MB_EN,HIGH);
+     // digitalWriteFast(MC_EN,HIGH);
+      digitalWriteFast(MA_STEP,HIGH);
+      digitalWriteFast(MB_STEP,HIGH);
+      digitalWriteFast(MC_STEP,HIGH);
+      
+   }
+   else 
+   {
+      // Pulslaenge einstellen, PINs aktivieren
+     joysticktimer.update(8*joystickWertArray[joystickindex & 0x02]);
+      //joysticktimer.update(1000);
+      //OSZIB_LO();
+      switch (joystickindex & 0x02)
+      {
+         case 0: // left
+         {
+            OSZIB_LO();
+               digitalWriteFast(MA_STEP,LOW);
+               digitalWriteFast(MA_EN,LOW);
+               digitalWriteFast(MA_RI,LOW);
+         }
+         break;
+         case 1: // right
+         {
+            //OSZIB_LO();
+            //digitalWriteFast(MA_EN,HIGH);
+            //digitalWriteFast(MA_STEP,LOW);
+            //digitalWriteFast(MA_EN,LOW);
+            //digitalWriteFast(MA_RI,HIGH);
+         }
+         break;
+      
+         case 2: // up
+         {
+            //OSZIB_LO();
+            //digitalWriteFast(MA_EN,HIGH);
+            //digitalWriteFast(MB_EN,HIGH);
+            //digitalWriteFast(MB_STEP,LOW);
+            //digitalWriteFast(MB_EN,LOW);
+            //digitalWriteFast(MB_RI,LOW);
+         }
+         break;
+         case 3: // down
+         {
+            //OSZIB_LO();
+            //digitalWriteFast(MA_EN,HIGH);
+            //digitalWriteFast(MB_EN,HIGH);
+            //digitalWriteFast(MB_STEP,LOW);
+            //digitalWriteFast(MB_EN,LOW);
+            //digitalWriteFast(MB_RI,HIGH);
+         }
+         break;
+      }
+   }
+   joystickindex++;
 }
 
 
@@ -1342,26 +1436,27 @@ void tastenfunktion(uint16_t Tastenwert)
                    
                } break; // case Folgetag
                   
-                  /*
-               case 7:
+                  
+               case 7: // Joystick on/off
                {
-                  // Serial.printf("\nTaste 7 \n");
-                  uint32_t pos_A = motor_A.getPosition();
-                  uint32_t pos_B = motor_B.getPosition();
-                  // Serial.printf("pos A: %d pos B: %d\n",pos_A, pos_B);
-                  
-                  //motor_A.setTargetRel(-pos_A);
-                  //motor_B.setTargetRel(-pos_B);
-                  motor_A.setTargetAbs(0);
-                  motor_B.setTargetAbs(0);
-                  
-                  digitalWriteFast(MA_EN,LOW);
-                  digitalWriteFast(MB_EN,LOW);
-                  controller.move(motor_A, motor_B);
+                  if(analogtastaturstatus & (1<<JOYSTIICK_ON))
+                  {
+                     analogtastaturstatus &= ~(1<<JOYSTIICK_ON); // OFF
+                     joysticktimer.end();
+
+                  }
+                  else 
+                  {
+                     analogtastaturstatus |= (1<<JOYSTIICK_ON); // ON
+                     joysticktimer.begin(joysticktimerFunktion,JOYSTICKSTAERIMPULS);
+                     joystickindex = 0;
+
+                  }
+                
                   
                }
                   break;
-                  */
+                  
                   
                case 8:    // down                                //Menu rueckwaertsschalten
                {
@@ -1494,12 +1589,27 @@ void tastenfunktion(uint16_t Tastenwert)
 
     
          analogtastaturstatus &= ~(1<<TASTE_ON);
-         
       }
    }
-   
 }
 
+uint16_t fixjoystickMitteA(uint8_t stick) // Mitte lesen
+{
+   uint16_t mittel = 0;
+   for (uint8_t i = 0;i<4;i++)
+   {
+      mittel  += adc->adc0->analogRead(stick);
+
+   }
+   return (mittel/4) ; // 
+}
+
+void joystickfunktionA(void)
+{
+   
+   uint8_t  i = 0;
+
+}
 
 
 void stopCNC(void)
@@ -1644,8 +1754,9 @@ void setup()
 
 // https://registry.platformio.org/libraries/pedvide/Teensy_ADC/examples/analogRead/analogRead.ino
    pinMode(TASTATURPIN , INPUT);
+   pinMode(POTA_PIN,INPUT);
    adc->adc0->setAveraging(4); // set number of averages
-   adc->adc0->setResolution(8);
+   adc->adc0->setResolution(10);
    adc->adc0->setConversionSpeed(ADC_CONVERSION_SPEED::HIGH_SPEED);
    adc->adc0->setSamplingSpeed(ADC_SAMPLING_SPEED::HIGH_SPEED);
    pinMode(DC_PWM, OUTPUT);
@@ -1717,6 +1828,24 @@ void setup()
    }
 
 
+   joystickMitteArray[0] = fixjoystickMitteA(POTA_PIN);
+   joystickMitteArray[1] = fixjoystickMitteA(POTA_PIN);
+   joystickMitteArray[2] = fixjoystickMitteA(POTA_PIN);
+   joystickMitteArray[3] = fixjoystickMitteA(POTA_PIN);
+
+   joystickWertArray[0] = joystickMitteArray[0];
+   joystickWertArray[1] = 100;//joystickMitteArray[1]+100;
+   joystickWertArray[2] = 100;//joystickMitteArray[2];
+   joystickWertArray[3] = 100;//joystickMitteArray[3]-100;
+
+
+   joystickPinArray[0] = POTA_PIN;
+   joystickPinArray[1] = 0xFF;
+   joystickPinArray[2] = 0xFF;
+   joystickPinArray[3] = 0xFF;
+
+  // joysticktimer.begin(joysticktimerFunktion,JOYSTICKSTAERIMPULS);
+
   // initialize the OLED object
 
   // https://forum.pjrc.com/index.php?threads/teensy-3-2-ssd1306-hardware-spi.70260/
@@ -1725,32 +1854,8 @@ void setup()
    
   
 
-/*
-// Waveshare OLED
- if ( ! OLED_display.begin(0x3D) ) {
-     Serial.println("Unable to initialize OLED");
-     while (1) yield();
-  }
- OLED_display.clearDisplay();
-  OLED_display.display();
 
 
-
-// draw rectangles
-  testdrawrect();
-  OLED_display.display();
-  delay(1000);
-  OLED_display.clearDisplay();
-*/
-/*
-lcd.begin(20,4);               // initialize the lcd 
-   delay(100);
-   // lcd.init();
-   delay(100);
-   // lcd.backlight();
-     lcd.home ();                   // go home
-  lcd.print("Hello, ARDUINO ");  
-*/
 
   // rampstatus |= (1 << RAMPOKBIT);
 
@@ -1826,52 +1931,17 @@ void loop()
 
 
 
-      //if (tastaturstatus == 0xF0) // Tastaturwerte weitergeben
-      {
-         sendbuffer[0] = 0xB8;
-         sendbuffer[59] = tastaturcounter++;
-         sendbuffer[57] = tastenwert;
-         sendbuffer[58] = Taste;
+         //if (tastaturstatus == 0xF0) // Tastaturwerte weitergeben
+         {
+            sendbuffer[0] = 0xB8;
+            sendbuffer[59] = tastaturcounter++;
+            sendbuffer[57] = tastenwert;
+            sendbuffer[58] = Taste;
 
-         //uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
-      }
+            //uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
+         }
          // OLED
-         //// Serial.printf("LED ON\n");
          digitalWriteFast(LOOPLED, 0);
-         /*
-          //// Serial.printf("blink\t %d\n",loopLED);
-          // lcd.setCursor(0,0);
-          // lcd.print("hallo");
-          // lcd.print(String(timer2Counter));
-          // lcd.setCursor(10,0);
-          // lcd.print(String(usb_recv_counter));
-
-          // lcd.setCursor(16,0);
-          // lcd.print(String(abschnittnummer));
-          // lcd.setCursor(0,1);
-          // lcd.print(String(CounterA&0xFF));
-          // lcd.setCursor(4,1);
-          // lcd.print(String(CounterB&0xFF));
-          */
-         /*
-         if (digitalRead(END_A0_PIN)) // Eingang ist HI, Schlitten nicht am Anschlag A0
-         {
-            //// Serial.printf("Anschlag Motor A OFF\n");
-         }
-          else
-          {
-             // Serial.printf("Anschlag Motor A ON\n");
-          }
-
-         if (digitalRead(END_B0_PIN)) // Eingang ist HI, Schlitten nicht am Anschlag A0
-         {
-            //// Serial.printf("Anschlag Motor B OFF\n");
-         }
-         else
-         {
-            // Serial.printf("Anschlag Motor B ON\n");
-         }
-*/
 
       }
       else
@@ -1883,40 +1953,45 @@ void loop()
       //      lcd.print(String(parallelcounter));
    } // sinceblink
 
-   if (sincelaststep > 50) // 60 us
+
+
+   if (sincelaststep > 100) // 60 us
    {
+      if(analogtastaturstatus & (1<<JOYSTIICK_ON))
+      {
+         //joystickWertArray[joystickindex] = readJoystick(joystickPinArray[joystickindex & 0x02]);
+         joystickWertArray[0] = readJoystick(joystickPinArray[0]);
+      }
       
-         if (analogtastaturstatus & (1<<TASTE_ON)) // Taste gedrueckt
-         {
-            OSZIC_LO();
-             
-         }
-         else 
-         { 
-            tastaturTimer.end();
-            /*
-            digitalWriteFast(MA_EN,HIGH);
-            digitalWriteFast(MB_EN,HIGH);
-            digitalWriteFast(MC_EN,HIGH);
-            digitalWriteFast(MA_STEP,HIGH);
-            digitalWriteFast(MB_STEP,HIGH);
-            digitalWriteFast(MC_STEP,HIGH);
-            */
-            OSZIC_HI();
-         }
+      if (analogtastaturstatus & (1<<TASTE_ON)) // Taste gedrueckt
+      {
+         OSZIC_LO();
+
+      }
+      else 
+      { 
+         tastaturTimer.end();
+
+         /*
+         digitalWriteFast(MA_EN,HIGH);
+         digitalWriteFast(MB_EN,HIGH);
+         digitalWriteFast(MC_EN,HIGH);
+         digitalWriteFast(MA_STEP,HIGH);
+         digitalWriteFast(MB_STEP,HIGH);
+         digitalWriteFast(MC_STEP,HIGH);
+         */
+         OSZIC_HI();
+      }
   
       // // Serial.printf("sincelaststep\n");
       sincelaststep = 0;
 
-
-    
       if(taskstatus & (1<<TASK))
       {
          //OSZIB_LO();
       }
       else 
       {
-         
          if (taskstatus & (1<<RUNNING))
          {
             //OSZIB_HI();
@@ -1930,33 +2005,26 @@ void loop()
             //
           
          
-         {
+         
            
-         }
+         
             tastencounter++;
-            if (tastencounter > 10)
+            //if (tastencounter > 10)
             {
                //OSZIA_LO();
                // Tastatur lesen
-               tastenwert = readTastatur(); //adc->adc0->analogRead(TASTATURPIN);
+               tastenwert = readTastatur() / 4; //adc->adc0->analogRead(TASTATURPIN);
                //tastenwert = 99;
-
-               // repetition erkennen
-               oldTaste = Taste; 
-               //uint8_t newTaste = Tastenwahl(tastenwert);
-               // if((oldTaste == 0) || (newTaste != oldTaste)) // andere Taste
-               {
- 
-                  //Taste = newTaste;
-                  tastenfunktion(tastenwert);
-
-               }
+               tastenfunktion(tastenwert);
+               //joystickWertArray[joystickindex & 0x02] = (readJoystick(joystickPinArray[joystickindex & 0x02]) / 4);
+               //joystickfunktionA();
+               
                
                   
-               }
+            }
             
             //OSZIA_HI();
-         }
+         } // NOT TASK
 
 
 
@@ -1964,7 +2032,7 @@ void loop()
       
       //Taste = 0;
    
-   }// sincelaststep > 500
+   }// sincelaststep > 50
  
    ////#pragma mark start_(usb
    
