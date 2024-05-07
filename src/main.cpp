@@ -305,6 +305,7 @@ canal_struct indata;
 // ADC
 #define TASTATURPIN  A9
 #define POTA_PIN     A1
+#define POTB_PIN     A8
 
 
 uint8_t joystickPinArray[4] = {};
@@ -312,10 +313,10 @@ uint16_t joystickWertArray[4] = {};
 uint16_t joystickMitteArray[4] = {};
 uint8_t joystickindex = 0; // aktueller joystick, 0-3
 #define JOYSTICKSTAERIMPULS   400
-#define JOYSTICKIMPULS        200
-#define JOYSTICKTOTBEREICH    10
-#define JOYSTICKMINIMPULS     150
-
+#define JOYSTICKIMPULS        150
+#define JOYSTICKTOTBEREICH    16
+#define JOYSTICKMINIMPULS     600
+#define JOYSTICKMAXDIFF       2000
 uint16_t potwertA = 0;
 uint8_t mitteA = 0;
 uint8_t minA = 0;
@@ -1259,25 +1260,36 @@ void joysticktimerFunktion(void)
    {
       // Pulslaenge einstellen, PINs aktivieren
       uint8_t tempindex = joystickindex & 0x03; 
-      uint16_t joystickwert =  joystickMitteArray[tempindex];
+      uint16_t joystickwert =  joystickMitteArray[tempindex]; // Mitte
+      uint16_t diff = 0;
       uint8_t richtung = 0; 
      //digitalWriteFast(MA_EN,LOW);
 
      if (joystickWertArray[tempindex] > joystickMitteArray[tempindex]) // vorwaerts
      {
          richtung |= (1<<tempindex);
+         diff = (joystickWertArray[tempindex] - joystickMitteArray[tempindex]);
          joystickwert -= (joystickWertArray[tempindex] - joystickMitteArray[tempindex]);
      }
      else 
      {
          //digitalWriteFast(MA_RI,HIGH);
          richtung &= ~(1<<tempindex);
+         diff = (joystickMitteArray[tempindex] - joystickWertArray[tempindex]);
          joystickwert -= (joystickMitteArray[tempindex] - joystickWertArray[tempindex]);
      }
 
-     if(abs(joystickwert - joystickMitteArray[tempindex]) > JOYSTICKTOTBEREICH) // ausserhalb mitte
+     //if(abs(joystickwert - joystickMitteArray[tempindex]) > JOYSTICKTOTBEREICH) // ausserhalb mitte
+     if(diff > JOYSTICKTOTBEREICH) // ausserhalb mitte
      {
-         joysticktimer.update(4*joystickwert);
+         //joysticktimer.update(4*joystickwert);
+         //joysticktimer.update(joystickMitteArray[tempindex] - diff);
+         diff = (6*diff);
+         if (diff > JOYSTICKMAXDIFF)
+         {
+            diff = JOYSTICKMAXDIFF;
+         }
+         joysticktimer.update(((2300 - diff)));
      
          //OSZIB_LO();
          switch (tempindex)
@@ -1796,6 +1808,7 @@ void setup()
 // https://registry.platformio.org/libraries/pedvide/Teensy_ADC/examples/analogRead/analogRead.ino
    pinMode(TASTATURPIN , INPUT);
    pinMode(POTA_PIN,INPUT);
+   pinMode(POTB_PIN,INPUT);
    adc->adc0->setAveraging(4); // set number of averages
    adc->adc0->setResolution(10);
    adc->adc0->setConversionSpeed(ADC_CONVERSION_SPEED::HIGH_SPEED);
@@ -1870,18 +1883,18 @@ void setup()
 
 
    joystickMitteArray[0] = fixjoystickMitteA(POTA_PIN);
-   joystickMitteArray[1] = fixjoystickMitteA(POTA_PIN);
+   joystickMitteArray[1] = fixjoystickMitteA(POTB_PIN);
    joystickMitteArray[2] = fixjoystickMitteA(POTA_PIN);
    joystickMitteArray[3] = fixjoystickMitteA(POTA_PIN);
 
    joystickWertArray[0] = joystickMitteArray[0];
-   joystickWertArray[1] = 100;//joystickMitteArray[1]+100;
+   joystickWertArray[1] = joystickMitteArray[1];
    joystickWertArray[2] = 100;//joystickMitteArray[2];
    joystickWertArray[3] = 100;//joystickMitteArray[3]-100;
 
 
    joystickPinArray[0] = POTA_PIN;
-   joystickPinArray[1] = 0xFF;
+   joystickPinArray[1] = 0xFF;//POTB_PIN;
    joystickPinArray[2] = 0xFF;
    joystickPinArray[3] = 0xFF;
 
@@ -2001,7 +2014,7 @@ void loop()
       if(analogtastaturstatus & (1<<JOYSTIICK_ON))
       {
          //joystickWertArray[joystickindex] = readJoystick(joystickPinArray[joystickindex & 0x03]);
-         joystickWertArray[0] = readJoystick(joystickPinArray[0]);
+        joystickWertArray[0] = readJoystick(joystickPinArray[0]);
       }
       
       if (analogtastaturstatus & (1<<TASTE_ON)) // Taste gedrueckt
