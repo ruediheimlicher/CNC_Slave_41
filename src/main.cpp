@@ -313,7 +313,7 @@ uint16_t joystickMitteArray[4] = {};
 uint8_t joystickindex = 0; // aktueller joystick, 0-3
 #define JOYSTICKSTAERIMPULS   400
 #define JOYSTICKIMPULS        200
-#define JOYSTICKTOTBEREICH    20
+#define JOYSTICKTOTBEREICH    10
 #define JOYSTICKMINIMPULS     150
 
 uint16_t potwertA = 0;
@@ -1257,73 +1257,90 @@ void joysticktimerFunktion(void)
    }
    else 
    {
-     // digitalWriteFast(MA_EN,LOW);
       // Pulslaenge einstellen, PINs aktivieren
-     uint16_t joystickwert =  joystickMitteArray[joystickindex & 0x03];
-     if (joystickWertArray[joystickindex & 0x03] > joystickMitteArray[joystickindex & 0x03]) // vorwaerts
+      uint8_t tempindex = joystickindex & 0x03; 
+      uint16_t joystickwert =  joystickMitteArray[tempindex];
+      uint8_t richtung = 0; 
+     //digitalWriteFast(MA_EN,LOW);
+
+     if (joystickWertArray[tempindex] > joystickMitteArray[tempindex]) // vorwaerts
      {
-         digitalWriteFast(MA_RI,LOW);
-         joystickwert -= (joystickWertArray[joystickindex & 0x03] - joystickMitteArray[joystickindex & 0x03]);
-         digitalWriteFast(MA_RI,LOW);
+         richtung |= (1<<tempindex);
+         joystickwert -= (joystickWertArray[tempindex] - joystickMitteArray[tempindex]);
      }
      else 
      {
-         digitalWriteFast(MA_RI,HIGH);
-         joystickwert -= (joystickMitteArray[joystickindex & 0x03] - joystickWertArray[joystickindex & 0x03]);
+         //digitalWriteFast(MA_RI,HIGH);
+         richtung &= ~(1<<tempindex);
+         joystickwert -= (joystickMitteArray[tempindex] - joystickWertArray[tempindex]);
      }
-     if(abs(joystickwert - joystickMitteArray[joystickindex & 0x03]) > JOYSTICKTOTBEREICH)
+
+     if(abs(joystickwert - joystickMitteArray[tempindex]) > JOYSTICKTOTBEREICH) // ausserhalb mitte
      {
-         digitalWriteFast(MA_EN,LOW);
-     joysticktimer.update(2*joystickwert);
-     }
-     else 
-   {
-      digitalWriteFast(MA_EN,HIGH);
-   }
-      //joysticktimer.update(1000);
-      //OSZIB_LO();
-      switch (joystickindex & 0x03)
-      {
-         case 0: // left
+         joysticktimer.update(4*joystickwert);
+     
+         //OSZIB_LO();
+         switch (tempindex)
          {
-            OSZIB_LO();
+            case 0: // left right
+            {
+               OSZIB_LO();
                digitalWriteFast(MA_STEP,LOW);
+               digitalWriteFast(MA_EN,LOW);
+               if(richtung & (1<<tempindex))
+               {
+                  digitalWriteFast(MA_RI,LOW);
+               }
+               else
+               {
+                  digitalWriteFast(MA_RI,HIGH);
+               }
+               //
+            
+            }
+            break;
+            case 1: // up down
+            {
+               //OSZIB_LO();
+               //digitalWriteFast(MA_EN,HIGH);
+               //digitalWriteFast(MA_STEP,LOW);
                //digitalWriteFast(MA_EN,LOW);
-               //digitalWriteFast(MA_RI,LOW);
-         }
-         break;
-         case 1: // right
-         {
-            //OSZIB_LO();
-            //digitalWriteFast(MA_EN,HIGH);
-            //digitalWriteFast(MA_STEP,LOW);
-            //digitalWriteFast(MA_EN,LOW);
-            //digitalWriteFast(MA_RI,HIGH);
-         }
-         break;
+               //digitalWriteFast(MA_RI,HIGH);
+            }
+            break;
       
-         case 2: // up
-         {
-            //OSZIB_LO();
-            //digitalWriteFast(MA_EN,HIGH);
-            //digitalWriteFast(MB_EN,HIGH);
-            //digitalWriteFast(MB_STEP,LOW);
-            //digitalWriteFast(MB_EN,LOW);
-            //digitalWriteFast(MB_RI,LOW);
+            case 2: // 
+            {
+               //OSZIB_LO();
+               //digitalWriteFast(MA_EN,HIGH);
+               //digitalWriteFast(MB_EN,HIGH);
+               //digitalWriteFast(MB_STEP,LOW);
+               //digitalWriteFast(MB_EN,LOW);
+               //digitalWriteFast(MB_RI,LOW);
+            }
+            break;
+            case 3: // 
+            {
+               //OSZIB_LO();
+               //digitalWriteFast(MA_EN,HIGH);
+               //digitalWriteFast(MB_EN,HIGH);
+               //digitalWriteFast(MB_STEP,LOW);
+               //digitalWriteFast(MB_EN,LOW);
+               //digitalWriteFast(MB_RI,HIGH);
+            }
+            break;
          }
-         break;
-         case 3: // down
-         {
-            //OSZIB_LO();
-            //digitalWriteFast(MA_EN,HIGH);
-            //digitalWriteFast(MB_EN,HIGH);
-            //digitalWriteFast(MB_STEP,LOW);
-            //digitalWriteFast(MB_EN,LOW);
-            //digitalWriteFast(MB_RI,HIGH);
-         }
-         break;
       }
+      /*
+     else 
+      {
+         //digitalWriteFast(MA_EN,HIGH); // > Pfeifen...
+
+      }
+      */
    }
+
+
    joystickindex++;
 }
 
@@ -1604,7 +1621,7 @@ void tastenfunktion(uint16_t Tastenwert)
          pfeiltastecode = 0;
          endimpulsdauer = ENDIMPULSDAUER;
          //A0_ISR();  
-            //digitalWriteFast(MA_EN,HIGH);
+            digitalWriteFast(MA_EN,HIGH);
             digitalWriteFast(MB_EN,HIGH);
             digitalWriteFast(MC_EN,HIGH);
             digitalWriteFast(MA_STEP,HIGH);
