@@ -120,7 +120,7 @@
 #define OSZI_PULS_A        17
 #define OSZI_PULS_B        10
 #define OSZI_PULS_C        11
-#define OSZI_PULS_D        41
+#define OSZI_PULS_D        17
 
 
 #define THREAD_COUNT_BIT   0

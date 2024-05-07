@@ -312,7 +312,9 @@ uint16_t joystickWertArray[4] = {};
 uint16_t joystickMitteArray[4] = {};
 uint8_t joystickindex = 0; // aktueller joystick, 0-3
 #define JOYSTICKSTAERIMPULS   400
-#define JOYSTICKIMPULS 200
+#define JOYSTICKIMPULS        200
+#define JOYSTICKTOTBEREICH    20
+#define JOYSTICKMINIMPULS     150
 
 uint16_t potwertA = 0;
 uint8_t mitteA = 0;
@@ -1255,18 +1257,39 @@ void joysticktimerFunktion(void)
    }
    else 
    {
+     // digitalWriteFast(MA_EN,LOW);
       // Pulslaenge einstellen, PINs aktivieren
-     joysticktimer.update(8*joystickWertArray[joystickindex & 0x02]);
+     uint16_t joystickwert =  joystickMitteArray[joystickindex & 0x03];
+     if (joystickWertArray[joystickindex & 0x03] > joystickMitteArray[joystickindex & 0x03]) // vorwaerts
+     {
+         digitalWriteFast(MA_RI,LOW);
+         joystickwert -= (joystickWertArray[joystickindex & 0x03] - joystickMitteArray[joystickindex & 0x03]);
+         digitalWriteFast(MA_RI,LOW);
+     }
+     else 
+     {
+         digitalWriteFast(MA_RI,HIGH);
+         joystickwert -= (joystickMitteArray[joystickindex & 0x03] - joystickWertArray[joystickindex & 0x03]);
+     }
+     if(abs(joystickwert - joystickMitteArray[joystickindex & 0x03]) > JOYSTICKTOTBEREICH)
+     {
+         digitalWriteFast(MA_EN,LOW);
+     joysticktimer.update(2*joystickwert);
+     }
+     else 
+   {
+      digitalWriteFast(MA_EN,HIGH);
+   }
       //joysticktimer.update(1000);
       //OSZIB_LO();
-      switch (joystickindex & 0x02)
+      switch (joystickindex & 0x03)
       {
          case 0: // left
          {
             OSZIB_LO();
                digitalWriteFast(MA_STEP,LOW);
-               digitalWriteFast(MA_EN,LOW);
-               digitalWriteFast(MA_RI,LOW);
+               //digitalWriteFast(MA_EN,LOW);
+               //digitalWriteFast(MA_RI,LOW);
          }
          break;
          case 1: // right
@@ -1450,6 +1473,7 @@ void tastenfunktion(uint16_t Tastenwert)
                      analogtastaturstatus |= (1<<JOYSTIICK_ON); // ON
                      joysticktimer.begin(joysticktimerFunktion,JOYSTICKSTAERIMPULS);
                      joystickindex = 0;
+                     //digitalWriteFast(MA_EN,LOW);
 
                   }
                 
@@ -1580,7 +1604,7 @@ void tastenfunktion(uint16_t Tastenwert)
          pfeiltastecode = 0;
          endimpulsdauer = ENDIMPULSDAUER;
          //A0_ISR();  
-            digitalWriteFast(MA_EN,HIGH);
+            //digitalWriteFast(MA_EN,HIGH);
             digitalWriteFast(MB_EN,HIGH);
             digitalWriteFast(MC_EN,HIGH);
             digitalWriteFast(MA_STEP,HIGH);
@@ -1749,7 +1773,7 @@ void stopTask(uint8_t emergency) // reset
 
 void setup()
 {
-   Serial.begin(115200);
+   //Serial.begin(115200);
    pinMode(LOOPLED, OUTPUT);
 
 // https://registry.platformio.org/libraries/pedvide/Teensy_ADC/examples/analogRead/analogRead.ino
@@ -1959,7 +1983,7 @@ void loop()
    {
       if(analogtastaturstatus & (1<<JOYSTIICK_ON))
       {
-         //joystickWertArray[joystickindex] = readJoystick(joystickPinArray[joystickindex & 0x02]);
+         //joystickWertArray[joystickindex] = readJoystick(joystickPinArray[joystickindex & 0x03]);
          joystickWertArray[0] = readJoystick(joystickPinArray[0]);
       }
       
@@ -2016,7 +2040,7 @@ void loop()
                tastenwert = readTastatur() / 4; //adc->adc0->analogRead(TASTATURPIN);
                //tastenwert = 99;
                tastenfunktion(tastenwert);
-               //joystickWertArray[joystickindex & 0x02] = (readJoystick(joystickPinArray[joystickindex & 0x02]) / 4);
+               //joystickWertArray[joystickindex & 0x03] = (readJoystick(joystickPinArray[joystickindex & 0x03]) / 4);
                //joystickfunktionA();
                
                
