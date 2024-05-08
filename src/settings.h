@@ -206,11 +206,11 @@
 
 #define TASTENSTARTIMPULSDAUER   3000 // Beginn Rampe
 #define ENDIMPULSDAUER     20
-#define TASTENENDIMPULSDAUER     1000
+#define TASTENENDIMPULSDAUER     800
 
-#define IMPULSBREITE  100
+#define IMPULSBREITE  150
 
-# define RAMPDELAY 10 // delay fuerr Reduktion Impulsdauer
+# define RAMPDELAY 10 // delay fuer Reduktion Impulsdauer
 
 
 

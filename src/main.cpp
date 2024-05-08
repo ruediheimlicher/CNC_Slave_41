@@ -230,6 +230,8 @@ volatile uint8_t status = 0;
 
 volatile uint8_t pfeilstatus = 0;
 volatile uint8_t tastaturstatus = 0;
+volatile uint8_t tastaturindex = 0; // counter for impuls/pause
+
 
 volatile uint8_t PWM = 0;
 static volatile uint8_t pwmposition = 0;
@@ -475,7 +477,28 @@ void kanalimpulsfunktion(void)
 
 void tastaturtimerFunktion(void) // TASTENSTARTIMPULSDAUER
 {
+
    OSZIB_LO();
+   if (tastaturindex % 2) // ungerade, Impuls
+   {
+         tastaturTimer.update(IMPULSBREITE);
+         digitalWriteFast(tastaturstep,HIGH);
+
+   }
+   else
+   {
+      if(rampimpulsdauer > (TASTENENDIMPULSDAUER + RAMPDELAY))
+      {
+         rampimpulsdauer -= RAMPDELAY;
+         
+      }
+      tastaturTimer.update(rampimpulsdauer);
+      digitalWriteFast(tastaturstep,LOW);
+   }
+   tastaturindex++;
+
+
+   /*
    kanalimpulsTimer.begin(kanalimpulsfunktion,IMPULSBREITE); // neuer Kanalimpuls
    digitalWriteFast(tastaturstep,LOW);
    if(rampimpulsdauer > (TASTENENDIMPULSDAUER + RAMPDELAY))
@@ -483,7 +506,7 @@ void tastaturtimerFunktion(void) // TASTENSTARTIMPULSDAUER
       rampimpulsdauer -= RAMPDELAY;
       tastaturTimer.update(rampimpulsdauer);
    }
-
+   */
 }
 
 
@@ -1647,6 +1670,7 @@ void tastenfunktion(uint16_t Tastenwert)
                tastaturimpulscounter = 0;
                tastaturTimer.begin(tastaturtimerFunktion,TASTENSTARTIMPULSDAUER);
                rampimpulsdauer = TASTENSTARTIMPULSDAUER;
+               tastaturindex=0;
 
             }
          }
