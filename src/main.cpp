@@ -322,11 +322,11 @@ volatile uint16_t potmaxB = 0;
 volatile uint16_t potminB = 0xFFFF;
 
 // Joystick Multiplex
-#define MAX_ADC 3310 // Max wert vom ADC
-#define MIN_ADC 2150 // Min wert vom ADC
+#define MAX_ADC 400 // Max wert vom ADC
+#define MIN_ADC JOYSTICKTOTBEREICH // Min wert vom ADC
 
-#define MAX_TICKS 2010 // Maxwert ms fur Impulslaenge
-#define MIN_TICKS 990  // Minwert ms fuer Impulslaenge
+#define MAX_TICKS 1700 // Maxwert ms fur Impulslaenge
+#define MIN_TICKS 0  // Minwert ms fuer Impulslaenge
 
 
 volatile uint8_t joystickPinArray[4] = {};
@@ -346,8 +346,8 @@ uint8_t maxminstatus = 0xFF; // o wenn max, min fixiert
 #define MAXB 2
 #define MINB 3
 
-#define JOYSTICKSTAERIMPULS   400
-#define JOYSTICKIMPULS        150
+#define JOYSTICKSTARTIMPULS   400
+#define JOYSTICKIMPULS        250
 #define JOYSTICKTOTBEREICH    10
 #define JOYSTICKMINIMPULS     600
 #define JOYSTICKMAXDIFF       1800
@@ -355,6 +355,9 @@ uint8_t maxminstatus = 0xFF; // o wenn max, min fixiert
 uint8_t mitteA = 0;
 uint8_t minA = 0;
 uint8_t maxA = 0xFF;
+
+uint16_t diff = 0;
+uint16_t mapdiff = 0;
 
 IntervalTimer joysticktimerA;
 IntervalTimer joysticktimerB;
@@ -408,6 +411,8 @@ long map(long x, long in_min, long in_max, long out_min, long out_max) {
 uint16_t mapADC(uint16_t inADC)
 {
   uint16_t raw_in = inADC;
+   // return map(raw_in, MIN_ADC, MAX_ADC, MIN_TICKS, MAX_TICKS);
+
   if(raw_in > MAX_ADC)
   {
     raw_in = MAX_ADC;
@@ -1319,39 +1324,44 @@ void joysticktimerAFunktion(void)
       // Pulslaenge einstellen, PINs aktivieren
       uint8_t tempindex = joystickindexA & 0x03; // 0,2
 
-      uint16_t diff = 0;
+      diff = 0;
+      mapdiff = 0;
       uint8_t richtung = 0; 
-     //digitalWriteFast(MA_EN,LOW);
 
      if (potwertA > potmitteA) // vorwaerts
      {
          richtung  = 1;
          diff = (potwertA - potmitteA);
-         potwertA -= diff; //(joystickWertArray[tempindex] - joystickMitteArray[tempindex]);
-     }
+      }
      else 
      {
-         //digitalWriteFast(MA_RI,HIGH);
          richtung = 0;
          diff = potmitteA -potwertA; //(joystickMitteArray[tempindex] - joystickWertArray[tempindex]);
-         potwertA -= diff; //(joystickMitteArray[tempindex] - joystickWertArray[tempindex]);
-     }
-
+      }
 
      //if(abs(potwertA - joystickMitteArray[tempindex]) > JOYSTICKTOTBEREICH) // ausserhalb mitte
      if(diff > JOYSTICKTOTBEREICH) // ausserhalb mitte
      {
+
          //joysticktimerA.update(4*potwertA);
          //joysticktimerA.update(joystickMitteArray[tempindex] - diff);
+         mapdiff = mapADC(diff);
          diff = (4*diff);
+          
+         sendbuffer[36] = (diff & 0xFF00) >> 8;
+         sendbuffer[37] = diff & 0x00FF;
+         sendbuffer[38] = (mapdiff & 0xFF00) >> 8;
+         sendbuffer[39] = mapdiff & 0x00FF;
+
+
          if (diff > JOYSTICKMAXDIFF)
          {
             diff = JOYSTICKMAXDIFF;
          }
-         joysticktimerA.update(((2300 - diff)));
-     
-         digitalWriteFast(MA_STEP,LOW);
-         digitalWriteFast(MA_EN,LOW);
+
+         //joysticktimerA.update(((2300 - diff)));
+         joysticktimerA.update(((2300 - mapdiff)));
+
          if(richtung)
          {
             digitalWriteFast(MA_RI,LOW);
@@ -1360,9 +1370,12 @@ void joysticktimerAFunktion(void)
          {
             digitalWriteFast(MA_RI,HIGH);
          }
-
-   
          
+         digitalWriteFast(MA_STEP,LOW);
+         digitalWriteFast(MA_EN,LOW);
+         
+
+
       }
    }
 
@@ -1589,8 +1602,8 @@ void tastenfunktion(uint16_t Tastenwert)
                   {
                      OSZIA_LO();
                      analogtastaturstatus |= (1<<JOYSTIICK_ON); // ON
-                     joysticktimerA.begin(joysticktimerAFunktion,JOYSTICKSTAERIMPULS);
-                     joysticktimerB.begin(joysticktimerBFunktion,JOYSTICKSTAERIMPULS);
+                     joysticktimerA.begin(joysticktimerAFunktion,JOYSTICKSTARTIMPULS);
+                     joysticktimerB.begin(joysticktimerBFunktion,JOYSTICKSTARTIMPULS);
                     
                      //joystickindexA = 0;
                      //digitalWriteFast(MA_EN,LOW);
@@ -1984,7 +1997,7 @@ void setup()
 
 
 
-  // joysticktimerA.begin(joysticktimerAFunktion,JOYSTICKSTAERIMPULS);
+  // joysticktimerA.begin(joysticktimerAFunktion,JOYSTICKSTARTIMPULS);
 
   // initialize the OLED object
 
@@ -2083,13 +2096,19 @@ void loop()
          if(analogtastaturstatus & (1<<JOYSTIICK_ON))
          {
             sendbuffer[0] = 0x9F;
+
+            sendbuffer[42] = fixjoystickMitte(POTA_PIN)>>2;
+            sendbuffer[43] = potmitteB>>2;
+                      
+
+            
             sendbuffer[59] = tastaturcounter++;
             sendbuffer[57] = tastenwert;
             sendbuffer[58] = Taste;
-            sendbuffer[59] = potwertA>>2;
-            sendbuffer[60] = potwertB>>2;
-            sendbuffer[61] = potminA>>2;
-            sendbuffer[62] = potmaxA>>2;
+            sendbuffer[59] = (potwertA & 0xFF00)>>8;
+            sendbuffer[60] = potwertA & 0x00FF;
+            sendbuffer[61] = (potwertB & 0xFF00)>>8;
+            sendbuffer[62] = potwertB & 0x00FF;
 
 
             uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
