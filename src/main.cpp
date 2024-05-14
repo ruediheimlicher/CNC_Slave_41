@@ -316,10 +316,12 @@ volatile uint16_t potmitteA = 0;
 volatile uint16_t potmitteB = 0;
 
 volatile uint16_t potmaxA = 0;
-volatile uint16_t potminA = 0;
+volatile uint16_t potminA = 0xFFFF;
 volatile uint16_t aaa = 617;
 volatile uint16_t potmaxB = 0;
 volatile uint16_t potminB = 0xFFFF;
+uint8_t startminH = 0;
+uint8_t startminL = 0;
 
 // Joystick Multiplex
 #define MAX_ADC 400 // Max wert vom ADC
@@ -345,7 +347,7 @@ volatile uint8_t joystickindexB = 0; // aktueller joystick, 0-3
 volatile uint8_t adcindex = 0; // aktueller joystick, 0-3
 volatile uint8_t ringbufferindexMin = 0;
 volatile uint8_t ringbufferindexMax = 0;
-uint8_t maxminstatus = 0xFF; // o wenn max, min fixiert
+uint8_t maxminstatus = 0xFF; // 0 wenn max, min fixiert
 // Bits for max ok, min ok
 #define MAX_A 0
 #define MIN_A 1
@@ -2064,9 +2066,11 @@ Serial.print("Initializing SD card...");
   // von Mill32
  pfeilimpulsdauer = TASTENSTARTIMPULSDAUER;
  taskstatus = 0;
- potminA = 1023;
-                  sendbuffer[18] = (potminA & 0xFF00)>>8;
-                  sendbuffer[19] = potminA & 0x00FF;
+                
+
+ //potminA = 1023;
+startminH = (potminA & 0xFF00)>>8;
+startminL = potminA & 0x00FF;
 aaa = 726;
 }
 
@@ -2113,8 +2117,8 @@ void loop()
 
             //sendbuffer[42] = fixjoystickMitte(POTA_PIN)>>2;
             //sendbuffer[43] = potmitteB>>2;
-            //sendbuffer[42] = (potmitteA  & 0xFF00) >> 8;       
-            //sendbuffer[43] = potmitteA & 0x0FF;
+            sendbuffer[42] = (potmitteA  & 0xFF00) >> 8;       
+            sendbuffer[43] = potmitteA & 0x0FF;
             
             //sendbuffer[59] = tastaturcounter++;
             //sendbuffer[57] = tastenwert;
@@ -2123,6 +2127,12 @@ void loop()
             sendbuffer[60] = potwertA & 0x00FF;
             sendbuffer[61] = (potwertB & 0xFF00)>>8;
             sendbuffer[62] = potwertB & 0x00FF;
+
+            sendbuffer[34] =startminH;
+            sendbuffer[35] = startminL;
+            
+            sendbuffer[18] = (potminA & 0xFF00)>>8;
+            sendbuffer[19] = potminA & 0x00FF;
 
 
             uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
@@ -2142,7 +2152,7 @@ void loop()
 
 
 
-   if (sincelaststep > 100) // 60 us
+   if (sincelaststep > 200) // 60 us
    {
       if(analogtastaturstatus & (1<<JOYSTIICK_ON))
       {
@@ -2161,13 +2171,14 @@ void loop()
                   ringbufferindexMax++;
                }
                
+               /*
                if(potwertA <= joystickminArrayA[MIN_A])
                {
                   ringbufferarrayminA[ringbufferindexMin%4] = potwertA;
                   ringbufferindexMin++;
                   
                }
-               
+               */
 
                if(adcindex%16 == 0) // 4 durchgaenge
                {
@@ -2193,58 +2204,64 @@ void loop()
                   }
 
 
-                  // Minimum
-                  volatile uint16_t minsum = 0;
-                 for (int i=0;i<4;i++)
-                  {
-                     minsum += ringbufferarrayminA[i];
-                  //sendbuffer[28] = ringbufferarrayminA[i]>>2; 
-                  //sendbuffer[29] = ringbufferarrayminA[3]>>2; 
-                  }  
-                   minsum = minsum / 4;
-                   
-                  sendbuffer[26] = (minsum & 0xFF00)>>8; 
-                  sendbuffer[27] = minsum & 0x00FF;                
+                  
                  
                   
-                  //sendbuffer[44] = (sum & 0xFF00)>>8; 
-                  //sendbuffer[45] = sum & 0x00FF;
-                  sendbuffer[28] = (potminA & 0xFF00)>>8;
-                  sendbuffer[29] = potminA & 0x00FF;
-                  if (minsum < potminA)
-                  {
-                     potminA = minsum;
-                     sendbuffer[18] = (potminA & 0xFF00)>>8;
-                     sendbuffer[19] = potminA & 0x00FF;
-                     sendbuffer[44] = (minsum & 0xFF00)>>8; 
-                     sendbuffer[45] = minsum & 0x00FF;
- 
-                     //sendbuffer[35] = potminA>>2;
-                  } 
-
-                  //sendbuffer[44] = (minsum & 0xFF00)>>8; 
-                  //sendbuffer[45] = minsum & 0x00FF;
- 
-                  if(minsum < aaa)
-                  {
-                     aaa = minsum;
-
-                  }
-                  
-                  else if (sum == potmaxA)
-                  {
-                     //maxminstatus &= ~(1<<MAX_A);
-                  }
-                  //sendbuffer[28] = (aaa & 0xFF00)>>8; 
-                  //sendbuffer[29] = aaa & 0x00FF; 
-
-
+                 
 
                } // %16
             
             
             } // if(maxminstatus & (1<<MAX_A))
             
+            // MINIMUM
+
+            if((maxminstatus & (1<<MIN_A)))
+            {
+               if(potwertA <= joystickminArrayA[MIN_A])
+               {
+                  ringbufferarrayminA[ringbufferindexMin%4] = potwertA;
+                  ringbufferindexMin++;
+               }
+               
+
+               if(adcindex%16 == 0) // 4 durchgaenge
+               {
+                  // Minimum
+                  volatile uint16_t minsum = 0;
+                  for (int i=0;i<4;i++)
+                  {
+                     sendbuffer[30+i] = (ringbufferarrayminA[i]>>2);
+                     minsum += ringbufferarrayminA[i];
+
+                  }  
+                  minsum = minsum / 4;
+
+                  // minsumraw OK
+                  sendbuffer[26] = (minsum & 0xFF00)>>8; 
+                  sendbuffer[27] = minsum & 0x00FF;                
+                 
+                  
+                  
+                  //sendbuffer[28] = (potminA & 0xFF00)>>8;
+                  //sendbuffer[29] = potminA & 0x00FF;
+                  if (minsum < potminA)
+                  {
+                     potminA = minsum;
+                     /*
+                     sendbuffer[18] = (potminA & 0xFF00)>>8;
+                     sendbuffer[19] = potminA & 0x00FF;
+                     sendbuffer[44] = (minsum & 0xFF00)>>8; 
+                     sendbuffer[45] = minsum & 0x00FF;
+                     */
+                     //sendbuffer[35] = potminA>>2;
+                  } 
+
+
+               }// adcindex%16
+
+
+            }// if((maxminstatus & (1<<MIN_A)))
 
            
             
