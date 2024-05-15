@@ -2097,7 +2097,7 @@ void loop()
       firstrun = 0;
    }
 
-   if (sinceblink > 500)
+   if (sinceblink > 1000)
    {
    //   startminH = (potminA & 0xFF00)>>8;
    //   startminL = potminA & 0x00FF;
@@ -2169,7 +2169,7 @@ void loop()
 
 
 
-   if (sincelaststep > 2500) // 
+   if (sincelaststep > 1000) // 
    {
       sincelaststep = 0;
 
@@ -2194,7 +2194,7 @@ void loop()
                   ringbufferarraymaxA[ringbufferindexMax%4] = potwertA;
                   ringbufferindexMax++;
                }
-               if(adcindex%16 == 0) // 4 durchgaenge
+               if(adcindex%32 == 0) // 4 durchgaenge
                {
                   uint16_t maxsum = 0;
                   for (int i=0;i<4;i++)
