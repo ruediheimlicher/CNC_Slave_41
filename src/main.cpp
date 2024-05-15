@@ -142,6 +142,8 @@ uint16_t cncdelaycounter = 0;
 uint8_t buffer[USB_DATENBREITE] = {};
 static volatile uint8_t sendbuffer[USB_DATENBREITE] = {};
 
+static volatile uint8_t joystickbuffer[USB_DATENBREITE] = {};
+
 // Ringbuffer
 uint8_t CNCDaten[RINGBUFFERTIEFE][USB_DATENBREITE];
 uint8_t CDCStringArray[RINGBUFFERTIEFE];
@@ -309,20 +311,6 @@ canal_struct indata;
 #define POTA_PIN     A1
 #define POTB_PIN     A8
 
-volatile uint16_t potwertA = 0;
-volatile uint16_t potwertB = 0;
-
-volatile uint16_t potmitteA = 0;
-volatile uint16_t potmitteB = 0;
-
-volatile uint16_t potmaxA = 0;
-volatile uint16_t potminA = 0xFFFF;
-volatile uint16_t aaa = 617;
-volatile uint16_t potmaxB = 0;
-volatile uint16_t potminB = 0xFFFF;
-uint8_t startminH = 0;
-uint8_t startminL = 0;
-
 // Joystick Multiplex
 #define MAX_ADC 400 // Max wert vom ADC
 #define MIN_ADC JOYSTICKTOTBEREICH // Min wert vom ADC
@@ -330,11 +318,31 @@ uint8_t startminL = 0;
 #define MAX_TICKS 1700 // Maxwert ms fur Impulslaenge
 #define MIN_TICKS 0  // Minwert ms fuer Impulslaenge
 
+volatile uint16_t potwertA = 0;
+volatile uint16_t potwertB = 0;
+
+volatile uint16_t potmitteA = 0;
+volatile uint16_t potmitteB = 0;
+
+volatile uint16_t potmaxA = 0;
+volatile uint16_t potminA = MAX_ADC;
+volatile uint16_t aaa = 0;
+volatile uint16_t potmaxB = 0;
+volatile uint16_t potminB = MAX_ADC;
+uint8_t startminH = 0;
+uint8_t startminL = 0;
+
+
 
 volatile uint8_t joystickPinArray[4] = {};
 volatile  uint16_t joystickmaxArrayA[4] = {0,0,0,0};
-volatile  uint16_t joystickminArrayA[4] = {0xFFFF,0xFFFF,0xFFFF,0xFFFF};
+volatile  uint16_t joystickminArrayA[4] = {MAX_ADC,MAX_ADC,MAX_ADC,MAX_ADC};
 volatile uint16_t joystickMitteArray[4] = {};
+
+volatile  uint16_t joystickmaxA = 0;
+volatile  uint16_t joystickminA = MAX_ADC;
+
+uint8_t firstrun = 1;
 
 uint16_t ringbufferarraymaxA[4] = {};
 uint16_t ringbufferarrayminA[4] = {};
@@ -1998,7 +2006,7 @@ void setup()
    potmitteA = fixjoystickMitte(POTA_PIN);
    potwertA = potmitteA;
    potminA = potmitteA;
-   potmaxA = potmitteA;
+   potmaxA = 1;
 
    potmitteB = fixjoystickMitte(POTB_PIN);
    potwertB = potmitteB;
@@ -2066,11 +2074,12 @@ Serial.print("Initializing SD card...");
   // von Mill32
  pfeilimpulsdauer = TASTENSTARTIMPULSDAUER;
  taskstatus = 0;
-                
+ firstrun = 1;               
 
- //potminA = 1023;
+potminA = potmitteA;
 startminH = (potminA & 0xFF00)>>8;
 startminL = potminA & 0x00FF;
+
 aaa = 726;
 }
 
@@ -2081,10 +2090,17 @@ void loop()
    //   threads.delay(1000);
 //tastaturimpulscounter++;
 // von Mill35
-
+   if (firstrun)
+   {
+      potminA = potmitteA;
+      joystickbuffer[10] = 1;
+      firstrun = 0;
+   }
 
    if (sinceblink > 500)
    {
+   //   startminH = (potminA & 0xFF00)>>8;
+   //   startminL = potminA & 0x00FF;
       //OSZIA_TOGG();
        if(analogtastaturstatus & (1<<JOYSTIICK_ON))
        {
@@ -2113,29 +2129,30 @@ void loop()
 
          if(analogtastaturstatus & (1<<JOYSTIICK_ON))
          {
-            sendbuffer[0] = 0x9F;
+            joystickbuffer[0] = 0x9F;
 
-            //sendbuffer[42] = fixjoystickMitte(POTA_PIN)>>2;
-            //sendbuffer[43] = potmitteB>>2;
-            sendbuffer[42] = (potmitteA  & 0xFF00) >> 8;       
-            sendbuffer[43] = potmitteA & 0x0FF;
+            //joystickbuffer[42] = fixjoystickMitte(POTA_PIN)>>2;
+            //joystickbuffer[43] = potmitteB>>2;
+            joystickbuffer[42] = (potmitteA  & 0xFF00) >> 8;       
+            joystickbuffer[43] = potmitteA & 0x0FF;
             
-            //sendbuffer[59] = tastaturcounter++;
-            //sendbuffer[57] = tastenwert;
-            //sendbuffer[58] = Taste;
-            sendbuffer[59] = (potwertA & 0xFF00)>>8;
-            sendbuffer[60] = potwertA & 0x00FF;
-            sendbuffer[61] = (potwertB & 0xFF00)>>8;
-            sendbuffer[62] = potwertB & 0x00FF;
+            //joystickbuffer[59] = tastaturcounter++;
+            //joystickbuffer[57] = tastenwert;
+            //joystickbuffer[58] = Taste;
+            joystickbuffer[59] = (potwertA & 0xFF00)>>8;
+            joystickbuffer[60] = potwertA & 0x00FF;
+            joystickbuffer[61] = (potwertB & 0xFF00)>>8;
+            joystickbuffer[62] = potwertB & 0x00FF;
 
-            sendbuffer[34] =startminH;
-            sendbuffer[35] = startminL;
+            joystickbuffer[34] =startminH;
+            joystickbuffer[35] = startminL;
             
-            sendbuffer[18] = (potminA & 0xFF00)>>8;
-            sendbuffer[19] = potminA & 0x00FF;
+            joystickbuffer[18] = (potminA & 0xFF00)>>8;
+            joystickbuffer[19] = potminA & 0x00FF;
 
 
-            uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
+            uint8_t senderfolg = usb_rawhid_send((void *)joystickbuffer, 10);
+
          }
          // OLED
          digitalWriteFast(LOOPLED, 0);
@@ -2152,115 +2169,79 @@ void loop()
 
 
 
-   if (sincelaststep > 200) // 60 us
+   if (sincelaststep > 2500) // 
    {
-      if(analogtastaturstatus & (1<<JOYSTIICK_ON))
-      {
-         if(adcindex%2 == 0) // gerade
-         {
-            
-           potwertA = readJoystick(POTA_PIN); // global
+      sincelaststep = 0;
 
-            if(maxminstatus & (1<<MAX_A))
-            {
-               
-               // in Ringbuffer einsetzen
-               if(potwertA >= joystickmaxArrayA[MAX_A])
+      if (potminA == 0)
+      {
+         potminA = potmitteA;
+         joystickbuffer[10] = (aaa & 0xFF00)>>8;
+         joystickbuffer[11] = aaa & 0x00FF;
+         aaa++;
+      }
+      if(analogtastaturstatus & (1<<JOYSTIICK_ON))  // joystick ON
+      {
+         if(adcindex%2 == 0) // even
+         {          
+            potwertA = readJoystick(POTA_PIN); // read joystick, global var
+            
+            // MAXIMUM
+            if(maxminstatus & (1<<MAX_A)) // calibration maximum ON
+            { 
+               if(potwertA >= joystickmaxA) // insert in Ringbuffer
                {
                   ringbufferarraymaxA[ringbufferindexMax%4] = potwertA;
                   ringbufferindexMax++;
                }
-               
-               /*
-               if(potwertA <= joystickminArrayA[MIN_A])
-               {
-                  ringbufferarrayminA[ringbufferindexMin%4] = potwertA;
-                  ringbufferindexMin++;
-                  
-               }
-               */
-
                if(adcindex%16 == 0) // 4 durchgaenge
                {
-                  uint16_t sum = 0;
+                  uint16_t maxsum = 0;
                   for (int i=0;i<4;i++)
                   {
-                     sum += ringbufferarraymaxA[i];
+                     maxsum += ringbufferarraymaxA[i];
                   }                 
-                  sum /= 4;
-                  //sendbuffer[50] = (sum & 0xFF00)>>8; 
-                  //sendbuffer[51] = sum & 0x00FF;
-                  if(sum > potmaxA)
+                  maxsum /= 4;
+                  if(maxsum > potmaxA)  // check for update Maximum
                   {
-                     potmaxA = sum;
-                     sendbuffer[50] = (sum & 0xFF00)>>8; 
-                     sendbuffer[51] = sum & 0x00FF;
-
-                     //sendbuffer[62] = potmaxA>>2;
-                  }  
-                  else if (sum == potmaxA)
-                  {
-                     //maxminstatus &= ~(1<<MAX_A);
-                  }
-
-
-                  
-                 
-                  
-                 
-
+                     potmaxA = maxsum;
+                     joystickbuffer[50] = (maxsum & 0xFF00)>>8; 
+                     joystickbuffer[51] = maxsum & 0x00FF;
+                  }                   
                } // %16
-            
-            
             } // if(maxminstatus & (1<<MAX_A))
             
             // MINIMUM
-
-            if((maxminstatus & (1<<MIN_A)))
+            if((maxminstatus & (1<<MIN_A)))  // calibration minimum ON
             {
-               if(potwertA <= joystickminArrayA[MIN_A])
+               if(potwertA <= joystickminA) // insert in Ringbuffer
                {
                   ringbufferarrayminA[ringbufferindexMin%4] = potwertA;
                   ringbufferindexMin++;
                }
-               
-
-               if(adcindex%16 == 0) // 4 durchgaenge
+               if(adcindex%16 == 0) // 4 loops
                {
                   // Minimum
                   volatile uint16_t minsum = 0;
                   for (int i=0;i<4;i++)
                   {
-                     sendbuffer[30+i] = (ringbufferarrayminA[i]>>2);
+                     joystickbuffer[30+i] = (ringbufferarrayminA[i]>>2);
                      minsum += ringbufferarrayminA[i];
-
                   }  
-                  minsum = minsum / 4;
-
-                  // minsumraw OK
-                  sendbuffer[26] = (minsum & 0xFF00)>>8; 
-                  sendbuffer[27] = minsum & 0x00FF;                
-                 
+                  minsum = minsum / 4; // average 
+                  joystickbuffer[26] = (minsum & 0xFF00)>>8; 
+                  joystickbuffer[27] = minsum & 0x00FF;
                   
-                  
-                  //sendbuffer[28] = (potminA & 0xFF00)>>8;
-                  //sendbuffer[29] = potminA & 0x00FF;
-                  if (minsum < potminA)
+                  if (minsum <= potminA) // check for update Minimum
                   {
                      potminA = minsum;
-                     /*
-                     sendbuffer[18] = (potminA & 0xFF00)>>8;
-                     sendbuffer[19] = potminA & 0x00FF;
-                     sendbuffer[44] = (minsum & 0xFF00)>>8; 
-                     sendbuffer[45] = minsum & 0x00FF;
-                     */
-                     //sendbuffer[35] = potminA>>2;
+                     
+                     joystickbuffer[18] = (potminA & 0xFF00)>>8;
+                     joystickbuffer[19] = potminA & 0x00FF;
+                     joystickbuffer[44] = (minsum & 0xFF00)>>8; 
+                     joystickbuffer[45] = minsum & 0x00FF;
                   } 
-
-
                }// adcindex%16
-
-
             }// if((maxminstatus & (1<<MIN_A)))
 
            
