@@ -2133,23 +2133,34 @@ void loop()
 
             //joystickbuffer[42] = fixjoystickMitte(POTA_PIN)>>2;
             //joystickbuffer[43] = potmitteB>>2;
-            joystickbuffer[42] = (potmitteA  & 0xFF00) >> 8;       
-            joystickbuffer[43] = potmitteA & 0x0FF;
+
+            // Pot A
+            joystickbuffer[10] = (potmitteA  & 0xFF00) >> 8;       
+            joystickbuffer[11] = potmitteA & 0x0FF;
             
+            joystickbuffer[12] = (potwertA & 0xFF00)>>8;
+            joystickbuffer[13] = potwertA & 0x00FF;
+
+            joystickbuffer[14] = (potminA & 0xFF00)>>8;
+            joystickbuffer[15] = potminA & 0x00FF;
+            joystickbuffer[16] = (potmaxA & 0xFF00)>>8;
+            joystickbuffer[17] = potmaxA & 0x00FF;
+
+            //Pot B           
+            joystickbuffer[20] = (potmitteB & 0xFF00)>>8;
+            joystickbuffer[21] = potmitteB & 0x00FF;
+
+            joystickbuffer[22] = (potwertB & 0xFF00)>>8;
+            joystickbuffer[23] = potwertB & 0x00FF;
+            
+            joystickbuffer[24] = (potminB & 0xFF00)>>8;
+            joystickbuffer[25] = potminB & 0x00FF;
+            joystickbuffer[26] = (potmaxB & 0xFF00)>>8;
+            joystickbuffer[27] = potmaxB & 0x00FF;
+
             //joystickbuffer[59] = tastaturcounter++;
             //joystickbuffer[57] = tastenwert;
             //joystickbuffer[58] = Taste;
-            joystickbuffer[59] = (potwertA & 0xFF00)>>8;
-            joystickbuffer[60] = potwertA & 0x00FF;
-            joystickbuffer[61] = (potwertB & 0xFF00)>>8;
-            joystickbuffer[62] = potwertB & 0x00FF;
-
-            joystickbuffer[34] =startminH;
-            joystickbuffer[35] = startminL;
-            
-            joystickbuffer[18] = (potminA & 0xFF00)>>8;
-            joystickbuffer[19] = potminA & 0x00FF;
-
 
             uint8_t senderfolg = usb_rawhid_send((void *)joystickbuffer, 10);
 
@@ -2169,7 +2180,7 @@ void loop()
 
 
 
-   if (sincelaststep > 1000) // 
+   if (sincelaststep > 500) // 
    {
       sincelaststep = 0;
 
@@ -2189,6 +2200,7 @@ void loop()
             // MAXIMUM
             if(maxminstatus & (1<<MAX_A)) // calibration maximum ON
             { 
+               /*
                if(potwertA >= joystickmaxA) // insert in Ringbuffer
                {
                   ringbufferarraymaxA[ringbufferindexMax%4] = potwertA;
@@ -2209,11 +2221,13 @@ void loop()
                      joystickbuffer[51] = maxsum & 0x00FF;
                   }                   
                } // %16
+               */
             } // if(maxminstatus & (1<<MAX_A))
             
             // MINIMUM
             if((maxminstatus & (1<<MIN_A)))  // calibration minimum ON
             {
+               /*
                if(potwertA <= joystickminA) // insert in Ringbuffer
                {
                   ringbufferarrayminA[ringbufferindexMin%4] = potwertA;
@@ -2242,6 +2256,7 @@ void loop()
                      joystickbuffer[45] = minsum & 0x00FF;
                   } 
                }// adcindex%16
+               */
             }// if((maxminstatus & (1<<MIN_A)))
 
            
