@@ -97,7 +97,8 @@ LiquidCrystal_I2C lcd(0x27,20,4);
 
 #include "bresenham.h"
 
-
+#include <EEPROM.h>
+#include "eeprom.c"
 #include "U8x8lib.h"
 
 // Set parameters
@@ -115,6 +116,10 @@ uint8_t loopLED;
 
 int8_t r;
 
+
+// EEPROM
+int address = 0;
+uint16_t eepromadresse = 0;
 // USB
 volatile uint8_t inbuffer[USB_DATENBREITE] = {};
 volatile uint8_t outbuffer[USB_DATENBREITE] = {};
@@ -131,6 +136,8 @@ elapsedMillis sinceload; // Zeitdauer der Anzeige des Potentialwertes
 elapsedMicros sincelaststep;
 
 elapsedMillis sincelastthread;
+
+elapsedMillis sincelastjoystickdata;
 
 
 elapsedMicros sincelastimpuls;
@@ -312,10 +319,10 @@ canal_struct indata;
 #define POTB_PIN     A8
 
 // Joystick Multiplex
-#define MAX_ADC 400 // Max wert vom ADC
-#define MIN_ADC JOYSTICKTOTBEREICH // Min wert vom ADC
+#define MAX_ADC 700 // Max wert vom ADC
+#define MIN_ADC 320 // Min wert vom ADC
 
-#define MAX_TICKS 1700 // Maxwert ms fur Impulslaenge
+#define MAX_TICKS 2300 // Maxwert ms fur Impulslaenge
 #define MIN_TICKS 0  // Minwert ms fuer Impulslaenge
 
 volatile uint16_t potwertA = 0;
@@ -352,7 +359,7 @@ volatile uint8_t joystickindexA = 0; // aktueller joystick, 0-3
 volatile uint8_t joystickindexB = 0; // aktueller joystick, 0-3
 
 
-volatile uint8_t adcindex = 0; // aktueller joystick, 0-3
+volatile uint16_t adcindex = 0; // aktueller joystick, 0-3
 volatile uint8_t ringbufferindexMin = 0;
 volatile uint8_t ringbufferindexMax = 0;
 uint8_t maxminstatus = 0xFF; // 0 wenn max, min fixiert
@@ -364,7 +371,7 @@ uint8_t maxminstatus = 0xFF; // 0 wenn max, min fixiert
 
 #define JOYSTICKSTARTIMPULS   400
 #define JOYSTICKIMPULS        250
-#define JOYSTICKTOTBEREICH    10
+#define JOYSTICKTOTBEREICH    20
 #define JOYSTICKMINIMPULS     600
 #define JOYSTICKMAXDIFF       1800
 //uint16_t potwertA = 0;
@@ -1377,7 +1384,7 @@ void joysticktimerAFunktion(void)
          }
 
          //joysticktimerA.update(((2300 - diff)));
-         joysticktimerA.update(((2300 - mapdiff)));
+         joysticktimerA.update(((MAX_TICKS - mapdiff)));
 
          if(richtung)
          {
@@ -1571,7 +1578,6 @@ void tastenfunktion(uint16_t Tastenwert)
                      digitalWriteFast(MA_RI,LOW);
                      
                      //digitalWriteFast(MA_STEP,LOW);
-
                   }
                 } break; // case Vortag
                   
@@ -1922,6 +1928,9 @@ void stopTask(uint8_t emergency) // reset
 
 void setup()
 {
+   eeprom_initialize();
+
+
    //Serial.begin(115200);
    pinMode(LOOPLED, OUTPUT);
 
@@ -2006,7 +2015,7 @@ void setup()
    potmitteA = fixjoystickMitte(POTA_PIN);
    potwertA = potmitteA;
    potminA = potmitteA;
-   potmaxA = 1;
+   potmaxA = potmitteA;
 
    potmitteB = fixjoystickMitte(POTB_PIN);
    potwertB = potmitteB;
@@ -2080,7 +2089,7 @@ potminA = potmitteA;
 startminH = (potminA & 0xFF00)>>8;
 startminL = potminA & 0x00FF;
 
-aaa = 726;
+
 }
 
 // Add loop code
@@ -2096,6 +2105,8 @@ void loop()
       joystickbuffer[10] = 1;
       firstrun = 0;
    }
+
+
 
    if (sinceblink > 1000)
    {
@@ -2117,6 +2128,8 @@ void loop()
       // scanI2C(100000);
       loopLED++;
       sinceblink = 0;
+      uint16_t data = 0x1234;
+      //eeprom_write_word(&eepromadresse, data);
 
       //      // lcd.setCursor(0,1);
       //      // lcd.print(String(loopLED));
@@ -2129,11 +2142,11 @@ void loop()
 
          if(analogtastaturstatus & (1<<JOYSTIICK_ON))
          {
-            joystickbuffer[0] = 0x9F;
+            //joystickbuffer[0] = 0x9F;
 
             //joystickbuffer[42] = fixjoystickMitte(POTA_PIN)>>2;
             //joystickbuffer[43] = potmitteB>>2;
-
+            /*
             // Pot A
             joystickbuffer[10] = (potmitteA  & 0xFF00) >> 8;       
             joystickbuffer[11] = potmitteA & 0x0FF;
@@ -2161,8 +2174,8 @@ void loop()
             //joystickbuffer[59] = tastaturcounter++;
             //joystickbuffer[57] = tastenwert;
             //joystickbuffer[58] = Taste;
-
-            uint8_t senderfolg = usb_rawhid_send((void *)joystickbuffer, 10);
+            */
+    //        uint8_t senderfolg = usb_rawhid_send((void *)joystickbuffer, 10);
 
          }
          // OLED
@@ -2178,7 +2191,52 @@ void loop()
       //      lcd.print(String(parallelcounter));
    } // sinceblink
 
+   if (sincelastjoystickdata > 500)
+   {
+      sincelastjoystickdata = 0;
+        if(analogtastaturstatus & (1<<JOYSTIICK_ON))  // joystick ON
+        {
+            joystickbuffer[0] = 0x9F;
 
+            //joystickbuffer[42] = fixjoystickMitte(POTA_PIN)>>2;
+            //joystickbuffer[43] = potmitteB>>2;
+
+            // Pot A
+            joystickbuffer[10] = (potmitteA  & 0xFF00) >> 8;       
+            joystickbuffer[11] = potmitteA & 0x0FF;
+            
+            joystickbuffer[12] = (potwertA & 0xFF00)>>8;
+            joystickbuffer[13] = potwertA & 0x00FF;
+
+            joystickbuffer[14] = (potminA & 0xFF00)>>8;
+            joystickbuffer[15] = potminA & 0x00FF;
+            joystickbuffer[16] = (potmaxA & 0xFF00)>>8;
+            joystickbuffer[17] = potmaxA & 0x00FF;
+
+            //Pot B           
+            joystickbuffer[20] = (potmitteB & 0xFF00)>>8;
+            joystickbuffer[21] = potmitteB & 0x00FF;
+
+            if(((potwertB & 0xFF00)>>8) < 10)
+            {
+            joystickbuffer[22] = (potwertB & 0xFF00)>>8;
+            }
+            joystickbuffer[23] = potwertB & 0x00FF;
+            
+            joystickbuffer[24] = (potminB & 0xFF00)>>8;
+            joystickbuffer[25] = potminB & 0x00FF;
+            joystickbuffer[26] = (potmaxB & 0xFF00)>>8;
+            joystickbuffer[27] = potmaxB & 0x00FF;
+
+            //joystickbuffer[59] = tastaturcounter++;
+            //joystickbuffer[57] = tastenwert;
+            //joystickbuffer[58] = Taste;
+
+            uint8_t senderfolg = usb_rawhid_send((void *)joystickbuffer, 10);
+
+        }
+
+   }
 
    if (sincelaststep > 500) // 
    {
@@ -2267,7 +2325,7 @@ void loop()
          {
             potwertB = readJoystick(POTB_PIN);
          }
-        
+
 
         adcindex++;
       }
@@ -2694,16 +2752,20 @@ void loop()
         
          taskstatus &= ~(1<<TASK);
 
-         analogtastaturstatus &= ~(1<<TASTE_ON);sendbuffer[0] = 0xC2;
+         analogtastaturstatus &= ~(1<<TASTE_ON);
+         sendbuffer[0] = 0xC2;
          uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
 
       }
       break;
 
-      case 0xCA:
+      case 0xCA: // save
       {
+         eeprom_write_word(&eepromadresse, potmaxA);
          // Serial.printf("case CA\n");
       }
+
+
       break;
 
       case 0xE0: // Man: Alles stoppen
