@@ -319,10 +319,10 @@ canal_struct indata;
 #define POTB_PIN     A8
 
 // Joystick Multiplex
-#define MAX_ADC 700 // Max wert vom ADC
-#define MIN_ADC 320 // Min wert vom ADC
+#define MAX_ADC 180 // Max wert vom ADC
+#define MIN_ADC 0 // Min wert vom ADC
 
-#define MAX_TICKS 2300 // Maxwert ms fur Impulslaenge
+#define MAX_TICKS 4000 // Maxwert ms fur Impulslaenge
 #define MIN_TICKS 0  // Minwert ms fuer Impulslaenge
 
 volatile uint16_t potwertA = 0;
@@ -371,9 +371,9 @@ uint8_t maxminstatus = 0xFF; // 0 wenn max, min fixiert
 
 #define JOYSTICKSTARTIMPULS   400
 #define JOYSTICKIMPULS        250
-#define JOYSTICKTOTBEREICH    20
+#define JOYSTICKTOTBEREICH    10
 #define JOYSTICKMINIMPULS     600
-#define JOYSTICKMAXDIFF       1800
+#define JOYSTICKMAXDIFF       2500
 //uint16_t potwertA = 0;
 uint8_t mitteA = 0;
 uint8_t minA = 0;
@@ -1369,13 +1369,15 @@ void joysticktimerAFunktion(void)
 
          //joysticktimerA.update(4*potwertA);
          //joysticktimerA.update(joystickMitteArray[tempindex] - diff);
-         mapdiff = mapADC(diff);
+
+         //mapdiff = mapADC(diff);
+          mapdiff = map(diff,0,180,0,JOYSTICKMAXDIFF);
          diff = (4*diff);
           
-         sendbuffer[36] = (diff & 0xFF00) >> 8;
-         sendbuffer[37] = diff & 0x00FF;
-         sendbuffer[38] = (mapdiff & 0xFF00) >> 8;
-         sendbuffer[39] = mapdiff & 0x00FF;
+         joystickbuffer[32] = (diff & 0xFF00) >> 8;
+         joystickbuffer[33] = diff & 0x00FF;
+         joystickbuffer[34] = (mapdiff & 0xFF00) >> 8;
+         joystickbuffer[35] = mapdiff & 0x00FF;
 
 
          if (diff > JOYSTICKMAXDIFF)
@@ -1426,7 +1428,8 @@ void joysticktimerBFunktion(void)
       // Pulslaenge einstellen, PINs aktivieren
       uint8_t tempindex = joystickindexB & 0x03; // 0,2
 
-      uint16_t diff = 0;
+      diff = 0;
+      mapdiff = 0;
       uint8_t richtung = 0; 
      //digitalWriteFast(MB_EN,LOW);
 
@@ -1434,14 +1437,14 @@ void joysticktimerBFunktion(void)
      {
          richtung  = 1;
          diff = (potwertB - potmitteB);
-         potwertB -= diff; //(joystickWertArray[tempindex] - joystickMitteArray[tempindex]);
+         //potwertB -= diff; //(joystickWertArray[tempindex] - joystickMitteArray[tempindex]);
      }
      else 
      {
          //digitalWriteFast(MA_RI,HIGH);
          richtung = 0;
          diff = potmitteB -potwertB; //(joystickMitteBrray[tempindex] - joystickWertBrray[tempindex]);
-         potwertB -= diff; //(joystickMitteBrray[tempindex] - joystickWertBrray[tempindex]);
+         //potwertB -= diff; //(joystickMitteBrray[tempindex] - joystickWertBrray[tempindex]);
      }
 
 
@@ -1450,12 +1453,23 @@ void joysticktimerBFunktion(void)
      {
          //joysticktimerB.update(4*potwertB);
          //joysticktimerB.update(joystickMitteBrray[tempindex] - diff);
-         diff = (4*diff);
+         
+         //mapdiff = mapADC(diff);
+          mapdiff = map(diff,0,180,0,JOYSTICKMAXDIFF);
+
+          diff = (4*diff);
+         /*
          if (diff > JOYSTICKMAXDIFF)
          {
             diff = JOYSTICKMAXDIFF;
          }
-         joysticktimerB.update(((2300 - diff)));
+         */
+         joystickbuffer[36] = (diff & 0xFF00) >> 8;
+         joystickbuffer[37] = diff & 0x00FF;
+         joystickbuffer[38] = (mapdiff & 0xFF00) >> 8;
+         joystickbuffer[39] = mapdiff & 0x00FF;
+
+         joysticktimerB.update(((MAX_TICKS - mapdiff)));
      
          digitalWriteFast(MB_STEP,LOW);
          digitalWriteFast(MB_EN,LOW);
