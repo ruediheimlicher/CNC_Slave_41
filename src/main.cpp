@@ -378,11 +378,11 @@ uint8_t maxminstatus = 0; // 0 wenn max, min fixiert
 #define MAX_B 2
 #define MIN_B 3
 
-#define JOYSTICKSTARTIMPULS   400 // impuls bei Start Joystick von Tastatur aus
-#define JOYSTICKIMPULS        400 // impulsdauer
+#define JOYSTICKSTARTIMPULS   1000 // impuls bei Start Joystick von Tastatur aus
+#define JOYSTICKIMPULS        1000 // impulsdauer
 #define JOYSTICKTOTBEREICH    10
 #define JOYSTICKMINIMPULS     1000
-#define JOYSTICKMAXDIFF       5000
+#define JOYSTICKMAXDIFF       5800
 #define JOYSTICKMAXTICKS      6000
 
 volatile uint16_t calibminA = 0xFFFF;
@@ -1373,6 +1373,10 @@ void joysticktimerAFunktion(void)
 void joysticktimerBFunktion(void)
 {
    //return;
+   if(maxminstatus & (1<<MAX_A))
+   {
+      return;
+   }
    if(joystickindexB % 2) // ungerade, Impuls, 1,3
    {
       OSZIB_HI();
@@ -1400,23 +1404,18 @@ void joysticktimerBFunktion(void)
      {
          richtung  = 1;
          diff = (potwertB - potmitteB);
-         //potwertB -= diff; //(joystickWertArray[tempindex] - joystickMitteArray[tempindex]);
      }
      else 
      {
          //digitalWriteFast(MA_RI,HIGH);
          richtung = 0;
          diff = potmitteB -potwertB; //(joystickMitteBrray[tempindex] - joystickWertBrray[tempindex]);
-         //potwertB -= diff; //(joystickMitteBrray[tempindex] - joystickWertBrray[tempindex]);
      }
 
 
      //if(abs(potwertB - joystickMitteBrray[tempindex]) > JOYSTICKTOTBEREICH) // ausserhalb mitte
      if(diff > JOYSTICKTOTBEREICH) // ausserhalb mitte
      {
-         //joysticktimerB.update(4*potwertB);
-         //joysticktimerB.update(joystickMitteBrray[tempindex] - diff);
-         
          if (richtung)
          {
             mapdiff = map(diff,0,calibmaxB - potmitteB,0,JOYSTICKMAXDIFF);
@@ -1602,6 +1601,8 @@ void tastenfunktion(uint16_t Tastenwert)
                   {
                      analogtastaturstatus &= ~(1<<JOYSTIICK_ON); // OFF
                      joysticktimerA.end();
+                     joysticktimerB.end();
+                     maxminstatus &= ~(1<<MAX_A);
                      OSZIA_HI();
                   }
                   else 
@@ -1616,10 +1617,12 @@ void tastenfunktion(uint16_t Tastenwert)
                      //digitalWriteFast(MA_EN,LOW);
 
                   }
-                
+                  joystickbuffer[0] = 0xAE;
                   joystickbuffer[2] = analogtastaturstatus;
+                  joystickbuffer[3] = maxminstatus;
+                  uint8_t senderfolg = usb_rawhid_send((void *)joystickbuffer, 10);
                }
-                  break;
+               break;
                   
                   
                case 2:    // down                                //Menu rueckwaertsschalten
@@ -1679,7 +1682,8 @@ void tastenfunktion(uint16_t Tastenwert)
                      }
                      
                   }
-                  joystickbuffer[2] = analogtastaturstatus;
+                  joystickbuffer[0] = 0xAE;
+                  //joystickbuffer[2] = analogtastaturstatus;
                   joystickbuffer[3] = maxminstatus;
                   uint8_t senderfolg = usb_rawhid_send((void *)joystickbuffer, 10);
 
