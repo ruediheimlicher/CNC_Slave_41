@@ -149,7 +149,7 @@ uint16_t cncdelaycounter = 0;
 uint8_t buffer[USB_DATENBREITE] = {};
 static volatile uint8_t sendbuffer[USB_DATENBREITE] = {};
 
-static volatile uint8_t joystickbuffer[USB_DATENBREITE] = {};
+volatile uint8_t joystickbuffer[USB_DATENBREITE] = {};
 
 // Ringbuffer
 uint8_t CNCDaten[RINGBUFFERTIEFE][USB_DATENBREITE];
@@ -354,6 +354,9 @@ uint8_t firstrun = 1;
 uint16_t ringbufferarraymaxA[4] = {};
 uint16_t ringbufferarrayminA[4] = {};
 
+uint16_t ringbufferarraymaxB[4] = {};
+uint16_t ringbufferarrayminB[4] = {};
+
 volatile uint8_t joystickindexA = 0; // aktueller joystickjob impuls oder pause
 
 volatile uint8_t joystickindexB = 0; // aktueller joystickjob impuls oder pause
@@ -361,10 +364,14 @@ volatile uint8_t joystickindexB = 0; // aktueller joystickjob impuls oder pause
 
 volatile uint16_t adcindex = 0; // aktueller joystick, 0-3
 
-volatile uint8_t ringbufferindexMin = 0;
-volatile uint8_t ringbufferindexMax = 0;
+volatile uint8_t ringbufferindexMinA = 0;
+volatile uint8_t ringbufferindexMaxA = 0;
 
-uint8_t maxminstatus = 0xFF; // 0 wenn max, min fixiert
+volatile uint8_t ringbufferindexMinB = 0;
+volatile uint8_t ringbufferindexMaxB = 0;
+
+
+uint8_t maxminstatus = 0; // 0 wenn max, min fixiert
 // Bits for max ok, min ok
 #define MAX_A 0
 #define MIN_A 1
@@ -378,7 +385,14 @@ uint8_t maxminstatus = 0xFF; // 0 wenn max, min fixiert
 #define JOYSTICKMAXDIFF       5000
 #define JOYSTICKMAXTICKS      6000
 
-uint8_t mitteA = 0;
+volatile uint16_t calibminA = 0xFFFF;
+volatile uint16_t calibmaxA = 0;
+
+volatile uint16_t calibminB = 0xFFFF;
+volatile uint16_t calibmaxB = 0;
+
+
+uint16_t calibdiffA = 0;
 //uint8_t minA = 0;
 //uint8_t maxA = 0xFF;
 
@@ -1208,66 +1222,6 @@ void plot_line(int x0, int y0, int x1, int y1)
 // delay(1000);
 //  Add setup code
 
-void thread_func(int inc)
-{
-   /*
-   // lcd.setCursor(0,0);
-   // lcd.print("A: ");
-
-   // lcd.setCursor(0,1);
-   // lcd.print("A:");
-   // lcd.setCursor(6,1);
-   // lcd.print("B:");
-
-   // lcd.setCursor(5,0);
-   // lcd.print("PWM:");
-*/
-/*
-   while (1)
-   {
-      if (parallelstatus & (1 << THREAD_COUNT_BIT))
-      {
-         parallelcounter += 1;
-
-         // lcd.setCursor(0,1);
-         // String s = "D";
-         // lcd.setCursor(13,0);
-
-         uint16_t rest = Abschnitte - AbschnittCounter;
-         // lcd.print(String(rest));
-
-         //  s.append(rest);
-         
-         s.append("n ");
-
-         s.append(StepCounterA);
-         s.append("\n");
-
-         // lcd.print(s);
-        
-         
-         //// lcd.print(String(parallelcounter));
-         // lcd.setCursor(9,0);
-         // lcd.print(String(PWM));
-         // lcd.setCursor(2,1);
-         // lcd.print(String(StepCounterA));
-         // lcd.setCursor(8,1);
-         // lcd.print(String(StepCounterB));
-          
-         parallelstatus &= ~(1 << THREAD_COUNT_BIT);
-      }
-   }
-   */
-   /*
-   if (sincelastthread >= 500)
-   {
-      sincelastthread = 0;
-      parallelcounter += 2;
- //     // lcd.setCursor(12,0);
-  //    // lcd.print(String(parallelcounter));
-   }
-   */
-}
 
 ADC *adc = new ADC(); // adc object;
 
@@ -1332,7 +1286,11 @@ uint16_t readTastatur(void)
 }
 void joysticktimerAFunktion(void)
 {
-   //return;
+   if(maxminstatus & (1<<MAX_A))
+   {
+      return;
+   }
+   
    if(joystickindexA % 2) // ungerade, Impuls, 1,3
    {
       OSZIB_HI();
@@ -1370,34 +1328,27 @@ void joysticktimerAFunktion(void)
      if(diff > JOYSTICKTOTBEREICH) // ausserhalb mitte
      {
 
-         //joysticktimerA.update(4*potwertA);
-         //joysticktimerA.update(joystickMitteArray[tempindex] - diff);
-
-         
-        // mapdiff = map(diff,0,180,0,JOYSTICKMAXDIFF);
+    
          if (richtung)
          {
-            mapdiff = map(diff,0,180,0,JOYSTICKMAXDIFF);
+            mapdiff = map(diff,0,calibmaxA - potmitteA ,0,JOYSTICKMAXDIFF);
          }
          else
          {
-            mapdiff = map(diff,0,200,0,JOYSTICKMAXDIFF);
+            mapdiff = map(diff,0,potmitteA - calibminA,0,JOYSTICKMAXDIFF);
          }
+         //mapdiff = map(diff,0,190,0,JOYSTICKMAXDIFF);
          
-         diff = (4*diff);
+         
           
          joystickbuffer[32] = (diff & 0xFF00) >> 8;
          joystickbuffer[33] = diff & 0x00FF;
          joystickbuffer[34] = (mapdiff & 0xFF00) >> 8;
          joystickbuffer[35] = mapdiff & 0x00FF;
 
+         diff = (4*diff);
 
-         if (diff > JOYSTICKMAXDIFF)
-         {
-            diff = JOYSTICKMAXDIFF;
-         }
-
-         //joysticktimerA.update(((2300 - diff)));
+         
          joysticktimerA.update(((JOYSTICKMAXTICKS - mapdiff)));
 
          if(richtung)
@@ -1466,10 +1417,17 @@ void joysticktimerBFunktion(void)
          //joysticktimerB.update(4*potwertB);
          //joysticktimerB.update(joystickMitteBrray[tempindex] - diff);
          
-         //mapdiff = mapADC(diff);
-          mapdiff = map(diff,0,190,0,JOYSTICKMAXDIFF);
+         if (richtung)
+         {
+            mapdiff = map(diff,0,calibmaxB - potmitteB,0,JOYSTICKMAXDIFF);
 
-          diff = (4*diff);
+         }
+         else
+         {
+            mapdiff = map(diff,0, potmitteB - calibminB,0,JOYSTICKMAXDIFF);
+         }
+          
+          
          /*
          if (diff > JOYSTICKMAXDIFF)
          {
@@ -1483,6 +1441,8 @@ void joysticktimerBFunktion(void)
 
          joysticktimerB.update(((JOYSTICKMAXTICKS - mapdiff)));
      
+         diff = (4*diff);
+
          digitalWriteFast(MB_STEP,LOW);
          digitalWriteFast(MB_EN,LOW);
          if(richtung)
@@ -1555,7 +1515,7 @@ void tastenfunktion(uint16_t Tastenwert)
                }
                   break;
                   
-               case 2:     // up                             //  
+               case 8:     // up                             //  
                {
                   //uint8_t lage = AbschnittLaden_TS(pfeil4);
                   if (pfeiltastecode == 0)
@@ -1643,7 +1603,6 @@ void tastenfunktion(uint16_t Tastenwert)
                      analogtastaturstatus &= ~(1<<JOYSTIICK_ON); // OFF
                      joysticktimerA.end();
                      OSZIA_HI();
-
                   }
                   else 
                   {
@@ -1651,18 +1610,19 @@ void tastenfunktion(uint16_t Tastenwert)
                      analogtastaturstatus |= (1<<JOYSTIICK_ON); // ON
                      joysticktimerA.begin(joysticktimerAFunktion,JOYSTICKSTARTIMPULS);
                      joysticktimerB.begin(joysticktimerBFunktion,JOYSTICKSTARTIMPULS);
+
                     
                      //joystickindexA = 0;
                      //digitalWriteFast(MA_EN,LOW);
 
                   }
                 
-                  
+                  joystickbuffer[2] = analogtastaturstatus;
                }
                   break;
                   
                   
-               case 8:    // down                                //Menu rueckwaertsschalten
+               case 2:    // down                                //Menu rueckwaertsschalten
                {
                   //uint8_t lage = AbschnittLaden_TS(pfeil2);
                   if (pfeiltastecode == 0)
@@ -1685,14 +1645,44 @@ void tastenfunktion(uint16_t Tastenwert)
                   
                case 9:
                {
-                  //uint8_t lage = AbschnittLaden_TS(drilldown);
-                  if (pfeiltastecode == 0)
+                  //Kalibrierung ON/OFF
+                  if(analogtastaturstatus & (1<<JOYSTIICK_ON))
                   {
-                     pfeiltastecode = 24;
-                     pfeilimpulsdauer = TASTENSTARTIMPULSDAUER;
-                     endimpulsdauer = TASTENENDIMPULSDAUER;
+                     if(maxminstatus & (1<<MAX_A)) // ON
+                     {
+                        maxminstatus &= ~(1<<MAX_A);
+                        aaa = 11;
+
+                     }
+                     else
+                     {
+                        maxminstatus |= (1<<MAX_A);
+
+                        calibmaxA = potmitteA;
+                        joystickbuffer[52] = (calibmaxA & 0xFF00)>>8; 
+                        joystickbuffer[53] = calibmaxA & 0x00FF;
+
+                        calibminA = potmitteA;
+                        joystickbuffer[56] = (calibminA & 0xFF00)>>8; 
+                        joystickbuffer[57] = calibminA & 0x00FF;
+                        
+                         calibmaxB  = potmitteB;
+                        joystickbuffer[42] = (calibmaxB & 0xFF00)>>8; 
+                        joystickbuffer[43] = calibmaxB & 0x00FF;
+                      
+                        calibminB = potmitteB;
+                        joystickbuffer[46] = (calibminB & 0xFF00)>>8; 
+                        joystickbuffer[47] = calibminB & 0x00FF;
+
+                       
+                        aaa = 13;
+                     }
+                     
                   }
-                  
+                  joystickbuffer[2] = analogtastaturstatus;
+                  joystickbuffer[3] = maxminstatus;
+                  uint8_t senderfolg = usb_rawhid_send((void *)joystickbuffer, 10);
+
                }
                   
                   break;
@@ -2116,8 +2106,13 @@ startminH = (potminA & 0xFF00)>>8;
 startminL = potminA & 0x00FF;
 
 
-potminA = 330;
-potmaxA = 700;
+//potminA = 330;
+//potmaxA = 700;
+calibminA = potmitteA;
+calibmaxA = potmitteA;
+
+calibminB = potmitteB;
+calibmaxB = potmitteB;
 
 }
 
@@ -2167,47 +2162,7 @@ void loop()
       {
          // OLED
 
-
-
-         if(analogtastaturstatus & (1<<JOYSTIICK_ON))
-         {
-            //joystickbuffer[0] = 0x9F;
-
-            //joystickbuffer[42] = fixjoystickMitte(POTA_PIN)>>2;
-            //joystickbuffer[43] = potmitteB>>2;
-            /*
-            // Pot A
-            joystickbuffer[10] = (potmitteA  & 0xFF00) >> 8;       
-            joystickbuffer[11] = potmitteA & 0x0FF;
-            
-            joystickbuffer[12] = (potwertA & 0xFF00)>>8;
-            joystickbuffer[13] = potwertA & 0x00FF;
-
-            joystickbuffer[14] = (potminA & 0xFF00)>>8;
-            joystickbuffer[15] = potminA & 0x00FF;
-            joystickbuffer[16] = (potmaxA & 0xFF00)>>8;
-            joystickbuffer[17] = potmaxA & 0x00FF;
-
-            //Pot B           
-            joystickbuffer[20] = (potmitteB & 0xFF00)>>8;
-            joystickbuffer[21] = potmitteB & 0x00FF;
-
-            joystickbuffer[22] = (potwertB & 0xFF00)>>8;
-            joystickbuffer[23] = potwertB & 0x00FF;
-            
-            joystickbuffer[24] = (potminB & 0xFF00)>>8;
-            joystickbuffer[25] = potminB & 0x00FF;
-            joystickbuffer[26] = (potmaxB & 0xFF00)>>8;
-            joystickbuffer[27] = potmaxB & 0x00FF;
-
-            //joystickbuffer[59] = tastaturcounter++;
-            //joystickbuffer[57] = tastenwert;
-            //joystickbuffer[58] = Taste;
-            */
-    //        uint8_t senderfolg = usb_rawhid_send((void *)joystickbuffer, 10);
-
-         }
-         // OLED
+  
          digitalWriteFast(LOOPLED, 0);
 
       }
@@ -2218,17 +2173,88 @@ void loop()
       parallelcounter += 2;
       //      lcd.setCursor(14,0);
       //      lcd.print(String(parallelcounter));
-   } // sinceblink
+   } // sinceblink 1000
 
-   if (sincelastjoystickdata > 500)
+   if (sincelastjoystickdata > 500) // millis
    {
       sincelastjoystickdata = 0;
         if(analogtastaturstatus & (1<<JOYSTIICK_ON))  // joystick ON
         {
+            // Mittelwert
+            //if(adcindex%64 == 0) // 4 durchgaenge
+            if(maxminstatus & (1<<MAX_A)) // Kalibrierung ON
+            {
+               uint16_t maxsumA = 0;
+               uint16_t minsumA = 0;
+
+               uint16_t maxsumB = 0;
+               uint16_t minsumB = 0;
+               for (int i=0;i<4;i++)
+               {
+                  //joystickbuffer[54+i] = ringbufferarraymaxA[i]; 
+                  //joystickbuffer[55] = ringbufferarraymaxA[i] & 0x00FF;
+                  maxsumA += ringbufferarraymaxA[i];
+                  minsumA += ringbufferarrayminA[i];
+
+                  maxsumB += ringbufferarraymaxB[i];
+                  minsumB += ringbufferarrayminB[i];
+
+               }                 
+               maxsumA /= 4;
+               minsumA /= 4;
+
+               maxsumB /= 4;
+               minsumB /= 4;
+               joystickbuffer[50] = (maxsumA & 0xFF00)>>8; 
+               joystickbuffer[51] = maxsumA & 0x00FF;
+   
+               if(maxsumA > calibmaxA)
+               {
+                  calibmaxA = maxsumA;
+                  joystickbuffer[52] = (calibmaxA & 0xFF00)>>8; 
+                  joystickbuffer[53] = calibmaxA & 0x00FF;
+               }
+
+               joystickbuffer[54] = (minsumA & 0xFF00)>>8; 
+               joystickbuffer[55] = minsumA & 0x00FF;
+
+               if((calibminA == 0) || (minsumA < calibminA))
+               {
+                  calibminA = minsumA;
+                  joystickbuffer[56] = (calibminA & 0xFF00)>>8; 
+                  joystickbuffer[57] = calibminA & 0x00FF;
+               }
+
+               // Seite B
+               joystickbuffer[40] = (maxsumB & 0xFF00)>>8; 
+               joystickbuffer[41] = maxsumB & 0x00FF;
+
+               if(maxsumB > calibmaxB)
+               {
+                  calibmaxB = maxsumB;
+                  joystickbuffer[42] = (calibmaxB & 0xFF00)>>8; 
+                  joystickbuffer[43] = calibmaxB & 0x00FF;
+               }
+
+               joystickbuffer[44] = (minsumB & 0xFF00)>>8; 
+               joystickbuffer[45] = minsumB & 0x00FF;
+
+               if((calibminB == 0) || (minsumB < calibminB) )
+
+               {
+                  calibminB = minsumB;
+                  joystickbuffer[46] = (calibminB & 0xFF00)>>8; 
+                  joystickbuffer[47] = calibminB & 0x00FF;
+               }
+
+
+            }
+
+
+            // mittelwert
             joystickbuffer[0] = 0xAE;
 
-            //joystickbuffer[42] = fixjoystickMitte(POTA_PIN)>>2;
-            //joystickbuffer[43] = potmitteB>>2;
+            //joystickbuffer[2] = analogtastaturstatus;
 
             // Pot A
             joystickbuffer[10] = (potmitteA  & 0xFF00) >> 8;       
@@ -2260,47 +2286,132 @@ void loop()
             //joystickbuffer[59] = tastaturcounter++;
             //joystickbuffer[57] = tastenwert;
             //joystickbuffer[58] = Taste;
-            aaa++;
+
+            // Kalibrierung
+            //calibminB = 300;
+            joystickbuffer[46] = (calibminB & 0xFF00)>>8; 
+            joystickbuffer[47] = calibminB & 0x00FF;
+           
             joystickbuffer[60] = (aaa & 0xFF00)>>8;
             joystickbuffer[61] = aaa & 0x00FF;
 
 
             uint8_t senderfolg = usb_rawhid_send((void *)joystickbuffer, 10);
 
-        }
+         } // analogtastaturstatus & (1<<JOYSTIICK_ON)
 
-   }
+   } // sincelastjoystickdata > 500
 
-   if (sincelaststep > 500) // 
+   if (sincelaststep > 500) // micros
    {
       sincelaststep = 0;
 
-      if (potminA == 0)
-      {
-         //potminA = potmitteA;
-         joystickbuffer[60] = (aaa & 0xFF00)>>8;
-         joystickbuffer[61] = aaa & 0x00FF;
-         aaa++;
-      }
+      
       if(analogtastaturstatus & (1<<JOYSTIICK_ON))  // joystick ON
       {
          if(adcindex%2 == 0) // even
          {          
             potwertA = readJoystick(POTA_PIN); // read joystick, global var
-            
-            
-            
-           
 
-           
+            if(potwertA > potmitteA) // insert in Ringbuffer
+            {
+               ringbufferarraymaxA[ringbufferindexMaxA%4] = potwertA;
+               ringbufferindexMaxA++;
+            }
             
-         
+             if(potwertA < potmitteA) // insert in Ringbuffer
+            {
+               ringbufferarrayminA[ringbufferindexMinA%4] = potwertA;
+               ringbufferindexMinA++;
+            }
+
+
          }
          else
          {
             potwertB = readJoystick(POTB_PIN);
-         }
 
+            if(potwertB > potmitteB) // insert in Ringbuffer
+            {
+               ringbufferarraymaxB[ringbufferindexMaxB%4] = potwertB;
+               ringbufferindexMaxB++;
+            }
+            
+             if(potwertB < potmitteB) // insert in Ringbuffer
+            {
+               ringbufferarrayminB[ringbufferindexMinB%4] = potwertB;
+               ringbufferindexMinB++;
+            }
+         }
+/*
+         if(adcindex%64 == 0) // 4 durchgaenge
+         {
+            uint16_t maxsumA = 0;
+            uint16_t minsumA = 0;
+
+            uint16_t maxsumB = 0;
+            uint16_t minsumB = 0;
+            for (int i=0;i<4;i++)
+             {
+               //joystickbuffer[54+i] = ringbufferarraymaxA[i]; 
+               //joystickbuffer[55] = ringbufferarraymaxA[i] & 0x00FF;
+               maxsumA += ringbufferarraymaxA[i];
+               minsumA += ringbufferarrayminA[i];
+
+               maxsumB += ringbufferarraymaxB[i];
+               minsumB += ringbufferarrayminB[i];
+
+            }                 
+            maxsumA /= 4;
+            minsumA /= 4;
+
+            maxsumB /= 4;
+            minsumB /= 4;
+            joystickbuffer[50] = (maxsumA & 0xFF00)>>8; 
+            joystickbuffer[51] = maxsumA & 0x00FF;
+ 
+            if(maxsumA > calibmaxA)
+            {
+               calibmaxA = maxsumA;
+               joystickbuffer[52] = (calibmaxA & 0xFF00)>>8; 
+               joystickbuffer[53] = calibmaxA & 0x00FF;
+            }
+
+            joystickbuffer[54] = (minsumA & 0xFF00)>>8; 
+            joystickbuffer[55] = minsumA & 0x00FF;
+
+            if((calibminA == 0) || (minsumA < calibminA))
+            {
+               calibminA = minsumA;
+               joystickbuffer[56] = (calibminA & 0xFF00)>>8; 
+               joystickbuffer[57] = calibminA & 0x00FF;
+            }
+
+            // Seite B
+            joystickbuffer[40] = (maxsumB & 0xFF00)>>8; 
+            joystickbuffer[41] = maxsumB & 0x00FF;
+
+            if(maxsumB > calibmaxB)
+            {
+               calibmaxB = maxsumB;
+               joystickbuffer[42] = (calibmaxB & 0xFF00)>>8; 
+               joystickbuffer[43] = calibmaxB & 0x00FF;
+            }
+
+            joystickbuffer[44] = (minsumB & 0xFF00)>>8; 
+            joystickbuffer[45] = minsumB & 0x00FF;
+
+            if((calibminB == 0) || (minsumB < calibminB) )
+
+            {
+               calibminB = minsumB;
+               joystickbuffer[46] = (calibminB & 0xFF00)>>8; 
+               joystickbuffer[47] = calibminB & 0x00FF;
+            }
+
+
+         }
+*/
 
         adcindex++;
       }
@@ -2972,8 +3083,8 @@ void loop()
 
             potmaxB = buffer[27] | buffer[26] << 8;
             potminB = buffer[25] | buffer[24] << 8;
-            aaa++;
-            joystickbuffer[60] = aaa;
+            //aaa++;
+            //joystickbuffer[60] = aaa;
             
             //usb_rawhid_send((void *)sendbuffer, 0);
          }break;
