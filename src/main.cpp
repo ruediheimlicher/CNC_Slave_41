@@ -1326,7 +1326,7 @@ void joysticktimerAFunktion(void)
 
      //if(abs(potwertA - joystickMitteArray[tempindex]) > JOYSTICKTOTBEREICH) // ausserhalb mitte
      if(diff > JOYSTICKTOTBEREICH) // ausserhalb mitte
-     {
+      { 
 
     
          if (richtung)
@@ -1363,6 +1363,10 @@ void joysticktimerAFunktion(void)
          digitalWriteFast(MA_STEP,LOW);
          digitalWriteFast(MA_EN,LOW);
          
+      }
+      else
+      {
+         digitalWriteFast(MA_EN,HIGH);
       }
    }
 
@@ -1456,7 +1460,12 @@ void joysticktimerBFunktion(void)
    
          
       }
+      else
+      {
+         digitalWriteFast(MB_EN,HIGH);
+      }
    }
+   
 
 
    joystickindexB++;
