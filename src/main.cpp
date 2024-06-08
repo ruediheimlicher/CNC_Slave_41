@@ -101,6 +101,8 @@ LiquidCrystal_I2C lcd(0x27,20,4);
 #include "eeprom.c"
 #include "U8x8lib.h"
 
+#include "rgb_lcd.h"
+
 // Set parameters
 
 // Include application, user and local libraries
@@ -432,7 +434,10 @@ volatile uint16_t           pfeilrampdelay = 0;
 volatile uint16_t           endimpulsdauer = ENDIMPULSDAUER;
 volatile uint16_t           rampimpulsdauer = TASTENSTARTIMPULSDAUER;
 
-
+ rgb_lcd grove_lcd;
+   const int colorR = 255;
+   const int colorG = 0;
+   const int colorB = 0;
 
 /*
 uint8_t manright [64] = {128, 37, 0, 0, 20, 0, 0, 0, 128, 37, 0, 0, 20, 0, 0, 0, 194, 3, 0, 0, 0, 1, 1, 48, 240, 48, 1, 0, 0, 0, 0, 17, 3, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -1952,6 +1957,7 @@ void stopTask(uint8_t emergency) // reset
    digitalWriteFast(MB_STEP,HIGH);
    digitalWriteFast(MC_STEP,HIGH);
    
+  
    
 }
 
@@ -2127,6 +2133,11 @@ calibmaxA = potmitteA;
 calibminB = potmitteB;
 calibmaxB = potmitteB;
 
+
+grove_lcd.begin(16, 2);
+    
+grove_lcd.setRGB(colorR, colorG, colorB);
+lcd.print("hello CNC");
 }
 
 // Add loop code
@@ -2147,6 +2158,7 @@ void loop()
 
    if (sinceblink > 1000)
    {
+      //lcd.setCursor(0, 1);
    //   startminH = (potminA & 0xFF00)>>8;
    //   startminL = potminA & 0x00FF;
       //OSZIA_TOGG();

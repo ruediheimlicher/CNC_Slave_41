@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "../../../Elektronik/Display/EA DOG/2024/lcd-test"
+		},
+		{
+			"name": "OLED_Teensy",
+			"path": "../../Teensy/2024/OLED_Teensy"
+		},
+		{
+			"name": "OLED_Arduino",
+			"path": "../../../Elektronik/ AVR/ AVR_Programme/OLED_Arduino"
+		},
+		{
+			"name": "CNC_Slave_32",
+			"path": "."
+		}
+	],
+	"settings": {}
+}
