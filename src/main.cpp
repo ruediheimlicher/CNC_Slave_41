@@ -54,6 +54,9 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <LiquidCrystal_I2C.h>
+
+#include <U8g2lib.h>
+
 #include "main.h"
 #include "display.h"
 #include "font.h"
@@ -439,6 +442,13 @@ volatile uint16_t           rampimpulsdauer = TASTENSTARTIMPULSDAUER;
    const int colorG = 0;
    const int colorB = 0;
 
+
+U8G2_SSD1327_WS_128X128_F_4W_HW_SPI u8g2(U8G2_R0, /* cs=*/ 14, /* dc=*/ 10, /* reset=*/ -1);
+uint16_t loopcounter0 = 0;
+uint16_t loopcounter1 = 0;
+uint8_t h = 60;
+uint8_t wertcounter = 0;
+uint8_t wert = 0;
 /*
 uint8_t manright [64] = {128, 37, 0, 0, 20, 0, 0, 0, 128, 37, 0, 0, 20, 0, 0, 0, 194, 3, 0, 0, 0, 1, 1, 48, 240, 48, 1, 0, 0, 0, 0, 17, 3, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -2134,10 +2144,30 @@ calibminB = potmitteB;
 calibmaxB = potmitteB;
 
 
-grove_lcd.begin(16, 2);
+//grove_lcd.begin(16, 2);
     
-grove_lcd.setRGB(colorR, colorG, colorB);
-lcd.print("hello CNC");
+//grove_lcd.setRGB(colorR, colorG, colorB);
+//lcd.print("hello CNC");
+
+// OLED
+u8g2.setBusClock(1000000);
+ u8g2.begin();
+   u8g2.setFont(u8g2_font_helvB12_tr);
+  u8g2.firstPage();
+  do {
+    u8g2.setCursor(0, 20);
+    u8g2.print(F("CNC"));
+    u8g2.setCursor(50, 20);
+    u8g2.print(F("Hotwire"));
+    u8g2.setCursor(4, 40);
+    u8g2 .print(u8x8_u8toa(loopcounter1, 3));
+    u8g2.drawFrame(60,50,12,h);
+    u8g2.drawBox(61,50+h-wert,10,wert);
+  } while ( u8g2.nextPage() );
+  u8g2.setFont(u8g2_font_helvB12_tr);
+  u8g2.firstPage();
+
+
 }
 
 // Add loop code
@@ -2158,6 +2188,10 @@ void loop()
 
    if (sinceblink > 1000)
    {
+
+
+
+
       //lcd.setCursor(0, 1);
    //   startminH = (potminA & 0xFF00)>>8;
    //   startminL = potminA & 0x00FF;
@@ -2202,6 +2236,28 @@ void loop()
 
    if (sincelastjoystickdata > 500) // millis
    {
+ // OLED
+      u8g2.firstPage();
+      digitalWriteFast(23,!(digitalRead(23)));
+      loopcounter1 = 0;
+      wertcounter++;
+      if(wertcounter%2==0)
+      {
+      wert = map(wertcounter,0,255,0,60);
+      u8g2.drawFrame(60,50,12,h);
+      u8g2.drawBox(61,50+h-wert,10,wert);
+      u8g2.updateDisplayArea(7,6,2,8);
+      }
+      else 
+      {
+       u8g2.setCursor(4, 40);
+      u8g2 .print(u8x8_u8toa(wertcounter, 3));
+      u8g2.updateDisplayArea(0,3,4,2);
+      }
+      // OLED
+
+
+
       sincelastjoystickdata = 0;
         if(analogtastaturstatus & (1<<JOYSTIICK_ON))  // joystick ON
         {
@@ -2330,7 +2386,7 @@ void loop()
    if (sincelaststep > 500) // micros
    {
       sincelaststep = 0;
-
+     
       
       if(analogtastaturstatus & (1<<JOYSTIICK_ON))  // joystick ON
       {
