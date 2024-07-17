@@ -9,7 +9,7 @@
 #ifndef settings_h
 #define settings_h
 
-#define LOOPLED 13
+#define LOOPLED 14
 #define TIMER0_STARTWERT   0x40
 
 

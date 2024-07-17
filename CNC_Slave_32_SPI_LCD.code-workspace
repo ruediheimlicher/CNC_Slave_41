@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "CNC_Slave_32",
+			"path": "../CNC_Slave_32"
+		}
+	],
+	"settings": {}
+}
