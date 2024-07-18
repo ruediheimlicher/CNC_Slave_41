@@ -137,7 +137,7 @@ volatile uint8_t in_data[BUFSIZE];
 
 uint8_t paketnummer = 0;
 
-#define CLOCKSPEED 2000000
+#define CLOCKSPEED 4000000
 
 uint16_t spicounter=0;
 
@@ -1644,7 +1644,7 @@ void tastenfunktion(uint16_t Tastenwert)
       
         tastaturcounter++;
         
-      if (tastaturcounter>=80)   //   Prellen
+      if (tastaturcounter>=40)   //   Prellen
       {
          
          tastaturcounter=0x00;
@@ -1656,7 +1656,11 @@ void tastenfunktion(uint16_t Tastenwert)
          {
             //OSZIA_LO();
             analogtastaturstatus |= (1<<TASTE_ON); // nur einmal
-            
+            if(Tastenwert > 250)
+            {
+               //SPI_out2data(101,0xFF);
+               //haltfunktion();
+            }
             Taste=Tastenwahl(Tastenwert);
             // Serial.printf("Tastenwert: %d Taste: %d \n",Taste,Tastenwert);
             tastaturcounter=0;
@@ -2382,7 +2386,6 @@ void loop()
 
    if (sinceblink > 1000)
    {
-
       //lcd.setCursor(0, 1);
    //   startminH = (potminA & 0xFF00)>>8;
    //   startminL = potminA & 0x00FF;
@@ -2407,7 +2410,7 @@ void loop()
 
       //      // lcd.setCursor(0,1);
       //      // lcd.print(String(loopLED));
-
+      
     digitalWriteFast(LOOPLED,!(digitalRead(LOOPLED)));
 
 
@@ -2582,7 +2585,7 @@ void loop()
       }
       else
       {
-         //SPI_out2data(102,tastenwert);
+         // SPI_out2data(103,transferindex);
       }
       
       //SPI_out2data(out_data[2*paketnummer],out_data[2*paketnummer+1]);
@@ -2607,7 +2610,7 @@ void loop()
       transferindex++;
 
 
-   // end SPI
+      // end SPI
 
 
 
@@ -3014,7 +3017,7 @@ void loop()
             out_data[ABSCHNITTNUMMER_L] = indexl;
 
             uint8_t ind = indexl & 0xFF;
-            SPI_out2data(102,(indexl));
+            //SPI_out2data(102,(indexl));
             //   // Serial.printf("indexh: %d indexl: %d\n",indexh,indexl);
             abschnittnummer = indexh << 8;
             abschnittnummer += indexl;
@@ -3120,10 +3123,13 @@ void loop()
                   CNCDaten[pos][i] = buffer[i];
                }
             }
+            
             taskstatus |= (1<<TASK);
             sendbuffer[0] = 0xC2;
             uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
             startTimer2();
+                  
+
 
          }
          break;
@@ -3434,8 +3440,8 @@ void loop()
             uint8_t indexl = buffer[19];
             out_data[ABSCHNITTNUMMER_H] = indexh;
             out_data[ABSCHNITTNUMMER_L] = indexl;
-
-            SPI_out2data(102,(indexl));
+            //SPI_out2data(103,(indexl));
+            
             uint16_t index = indexl | (indexh >> 8);
 
             uint8_t position = buffer[17];
@@ -3575,7 +3581,7 @@ void loop()
       
 
       interrupts();
-      SPI_out2data(103,(abschnittnummer));
+     //SPI_out2data(103,(abschnittnummer));
       code = 0;
 
       //OSZIB_HI();
