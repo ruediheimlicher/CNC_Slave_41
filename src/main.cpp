@@ -1045,6 +1045,7 @@ uint8_t AbschnittLaden_bres(uint8_t *AbschnittDaten) // 22us
 
    // // Serial.printf("\nAbschnittLaden_bres end aktuellelage: %d \n",returnwert);
    //OSZIA_HI();
+   
    tastaturstatus = 0 ;
    return returnwert;
 }
@@ -1566,6 +1567,74 @@ void joysticktimerBFunktion(void)
 }
 
 
+void haltfunktion(void)
+{
+
+            // Serial.printf("E0 Stop\n");
+            ringbufferstatus = 0;
+            motorstatus = 0;
+            anschlagstatus = 0;
+            cncstatus = 0;
+            sendbuffer[0] = 0xE1;
+            tastaturstatus = 0xF0 ;
+            sendbuffer[5] = (abschnittnummer & 0xFF00) >> 8;
+            
+            sendbuffer[6] = abschnittnummer & 0x00FF;
+
+            sendbuffer[8] = ladeposition & 0x00FF;
+            // sendbuffer[7]=(ladeposition & 0xFF00) >> 8;
+            sendbuffer[22] = cncstatus;
+
+            usb_rawhid_send((void *)sendbuffer, 0);
+
+            sendbuffer[0] = 0x00;
+            sendbuffer[5] = 0x00;
+            sendbuffer[6] = 0x00;
+            sendbuffer[8] = 0x00;
+
+            ladeposition = 0;
+            sendbuffer[8] = ladeposition;
+            endposition = 0xFFFF;
+
+            AbschnittCounter = 0;
+            PWM = sendbuffer[29];
+            // digitalWriteFast(DC_PWM,HIGH);
+
+            analogWrite(DC_PWM, 0);
+
+            StepCounterA = 0;
+            StepCounterB = 0;
+            StepCounterC = 0;
+            StepCounterD = 0;
+
+            CounterA = 0;
+            CounterB = 0;
+            CounterC = 0;
+            CounterD = 0;
+
+            analogWrite(DC_PWM, 0);
+            korrekturcounterx = 0;
+            korrekturcountery = 0;
+            deltafastdirectionA = 0;
+            deltaslowdirectionA = 0;
+            deltafastdirectionB = 0;
+            deltaslowdirectionB = 0;
+            deltafastdelayA = 0;
+            deltafastdelayB = 0;
+
+            digitalWriteFast(MA_EN, HIGH);
+            digitalWriteFast(MB_EN, HIGH);
+
+            digitalWriteFast(MA_EN, HIGH);
+            digitalWriteFast(MB_EN, HIGH);
+            
+            digitalWriteFast(MA_STEP, HIGH);
+            digitalWriteFast(MB_STEP, HIGH);
+            digitalWriteFast(MC_STEP, HIGH);
+
+}
+
+
 void tastenfunktion(uint16_t Tastenwert)
 {
    
@@ -1678,6 +1747,12 @@ void tastenfunktion(uint16_t Tastenwert)
                {
                   // Serial.printf("Taste 5\n");
                   OSZIA_TOGG();
+                  if (pfeiltastecode == 0)
+                  {
+                     
+                     pfeiltastecode = 1;
+                     haltfunktion();
+                  }
                   
                }break;
                   
@@ -1891,6 +1966,7 @@ void tastenfunktion(uint16_t Tastenwert)
 
 
             }
+            
          }
          OSZIA_HI(); 
          
@@ -1917,6 +1993,8 @@ void tastenfunktion(uint16_t Tastenwert)
       }
    }
 }
+
+
 
 uint16_t fixjoystickMitte(uint8_t stick) // Mitte lesen
 {
@@ -2665,7 +2743,7 @@ void loop()
       { 
          tastaturTimer.end();
          // &= 0x03;
-         //SPI_out2data(101,0);
+         SPI_out2data(101,0);
 
          /*
          digitalWriteFast(MA_EN,HIGH);
@@ -2721,7 +2799,7 @@ void loop()
    
    }// sincelaststep > 50
  
- 
+   uint16_t spi_index = 0;
 
    //#pragma mark start_(usb
    
@@ -2935,7 +3013,8 @@ void loop()
             out_data[ABSCHNITTNUMMER_H] = indexh;
             out_data[ABSCHNITTNUMMER_L] = indexl;
 
-
+            uint8_t ind = indexl & 0xFF;
+            SPI_out2data(102,(indexl));
             //   // Serial.printf("indexh: %d indexl: %d\n",indexh,indexl);
             abschnittnummer = indexh << 8;
             abschnittnummer += indexl;
@@ -3356,7 +3435,7 @@ void loop()
             out_data[ABSCHNITTNUMMER_H] = indexh;
             out_data[ABSCHNITTNUMMER_L] = indexl;
 
-
+            SPI_out2data(102,(indexl));
             uint16_t index = indexl | (indexh >> 8);
 
             uint8_t position = buffer[17];
@@ -3493,7 +3572,10 @@ void loop()
          break; // default
 
       } // switch code
+      
+
       interrupts();
+      SPI_out2data(103,(abschnittnummer));
       code = 0;
 
       //OSZIB_HI();
@@ -3511,6 +3593,7 @@ void loop()
 
     */
    /*   Start CNC-routinen   ********************** */
+
    if (ringbufferstatus & (1 << STARTBIT)) // Buffer ist in Ringbuffer geladen, Schnittdaten von Abschnitt 0 laden
    {
       // noInterrupts();
