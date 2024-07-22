@@ -14,6 +14,8 @@
 
 #define JOYSTICK 1
 
+#define EEPROMCALIB 0x10
+
 // Stepper A
 
 

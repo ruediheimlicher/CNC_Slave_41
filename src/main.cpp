@@ -1816,11 +1816,13 @@ void tastenfunktion(uint16_t Tastenwert)
                {
                   // Serial.printf("Taste 5\n");
                   OSZIA_TOGG();
+                   SPI_out2data(102,16);
                   if (pfeiltastecode == 0)
                   {
                      
-                     pfeiltastecode = 1;
-                     haltfunktion();
+                     
+
+                     //haltfunktion();
                   }
                   
                }break;
@@ -1908,8 +1910,19 @@ void tastenfunktion(uint16_t Tastenwert)
                   {
                      if(maxminstatus & (1<<MAX_A)) // Kalibrierung eingeschaltet
                      {
+
                         maxminstatus &= ~(1<<MAX_A);// Kalibrierung OFF
                         aaa = 11;
+                        uint8_t eepromaddress = EEPROMCALIB;
+                        EEPROM.write(eepromaddress++,(calibmaxA & 0xFF00)>>8);
+                        EEPROM.write(eepromaddress++,calibmaxA & 0x00FF);
+                        EEPROM.write(eepromaddress++,(calibminA & 0xFF00)>>8);
+                        EEPROM.write(eepromaddress++,calibminA & 0x00FF);
+                        EEPROM.write(eepromaddress++,(calibmaxB & 0xFF00)>>8);
+                        EEPROM.write(eepromaddress++,calibmaxB & 0x00FF);
+                        EEPROM.write(eepromaddress++,(calibminB & 0xFF00)>>8);
+                        EEPROM.write(eepromaddress++,calibminB & 0x00FF);
+                        SPI_out2data(103,EEPROM.read(EEPROMCALIB+1));
 
                         spijoystickdata &= ~(1<<6);
                         spijoystickdata |= (1<<7);
@@ -2431,6 +2444,14 @@ u8g2.setBusClock(1000000);
 
 SPI.begin();
 out_data[0] = 0xFF;
+uint8_t eepromaddress = EEPROMCALIB;
+SPI_out2data(103,EEPROM.read(eepromaddress+1));
+calibmaxA = (EEPROM.read(eepromaddress++) << 8) |  EEPROM.read(eepromaddress++);
+calibmaxA = (EEPROM.read(eepromaddress++) << 8) |  EEPROM.read(eepromaddress++);
+
+calibminB = (EEPROM.read(eepromaddress++) << 8) |  EEPROM.read(eepromaddress++);
+calibmaxB = (EEPROM.read(eepromaddress++) << 8) |  EEPROM.read(eepromaddress++);
+
 
 }
 
@@ -2626,6 +2647,7 @@ void loop()
            
             joystickbuffer[60] = (aaa & 0xFF00)>>8;
             joystickbuffer[61] = aaa & 0x00FF;
+
 
 
             uint8_t senderfolg = usb_rawhid_send((void *)joystickbuffer, 10);
