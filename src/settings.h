@@ -12,7 +12,7 @@
 #define LOOPLED 14
 #define TIMER0_STARTWERT   0x40
 
-#define JOYSTICK 0
+#define JOYSTICK 1
 
 // Stepper A
 

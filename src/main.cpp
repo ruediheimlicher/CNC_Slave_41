@@ -72,15 +72,15 @@
 
 
 // Joystick
-#define JOYSTICKTASTE2 25
-#define JOYSTICKTASTE1 43
-#define JOYSTICKTASTE4 69
-#define JOYSTICKTASTE7 89
-#define JOYSTICKTASTE8 112
-#define JOYSTICKTASTE3 135
-#define JOYSTICKTASTE6 157
-#define JOYSTICKTASTE9 187
-#define JOYSTICKTASTE5 211
+#define JOYSTICKTASTE1 25
+#define JOYSTICKTASTE2 43
+#define JOYSTICKTASTE3 69
+#define JOYSTICKTASTE4 89
+#define JOYSTICKTASTE5 112
+#define JOYSTICKTASTE6 135
+#define JOYSTICKTASTE7 157
+#define JOYSTICKTASTE8 187
+#define JOYSTICKTASTE9 211
 
 #define JOYSTICKTASTEL  250
 #define JOYSTICKTASTER  250
@@ -1362,32 +1362,33 @@ uint8_t Tastenwahl(uint16_t Tastaturwert)
 
 uint8_t Joystick_Tastenwahl(uint16_t Tastaturwert)
 {
-   
+   //return 0;
    if (Tastaturwert < JOYSTICKTASTE1) 
-      return 1;
-   if (Tastaturwert < JOYSTICKTASTE2)
       return 2;
+   if (Tastaturwert < JOYSTICKTASTE2)
+      return 1;
    if (Tastaturwert < JOYSTICKTASTE3)
-      return 3;
-   if (Tastaturwert < JOYSTICKTASTE4)
       return 4;
-   if (Tastaturwert < JOYSTICKTASTE5)
-      return 5;
-   if (Tastaturwert < JOYSTICKTASTE6)
-      return 6;
-   if (Tastaturwert < JOYSTICKTASTE7)
+   if (Tastaturwert < JOYSTICKTASTE4)
       return 7;
-   if (Tastaturwert < JOYSTICKTASTE8)
+   if (Tastaturwert < JOYSTICKTASTE5)
       return 8;
-   if (Tastaturwert < JOYSTICKTASTE9)
+   if (Tastaturwert < JOYSTICKTASTE6)
+      return 3;
+   if (Tastaturwert < JOYSTICKTASTE7)
+      return 6;
+   if (Tastaturwert < JOYSTICKTASTE8)
       return 9;
+   if (Tastaturwert < JOYSTICKTASTE9)
+      return 5;
+      /*
    if (Tastaturwert < JOYSTICKTASTEL)
       return 10;
    if (Tastaturwert < JOYSTICKTASTE0)
       return 0;
    if (Tastaturwert < JOYSTICKTASTER)
       return 12;
-   
+      */
    return 0;
 }
  // tastenwahl
@@ -1715,7 +1716,10 @@ void tastenfunktion(uint16_t Tastenwert)
             
             if (JOYSTICK)
             {
+               uint8_t t = Tastenwert & 0xFF;
+               //SPI_out2data(102,t);
                Taste= Joystick_Tastenwahl(Tastenwert);
+               //SPI_out2data(102,Taste);
             }
             else
             {
@@ -1870,7 +1874,7 @@ void tastenfunktion(uint16_t Tastenwert)
                   joystickbuffer[0] = 0xAE;
                   joystickbuffer[2] = analogtastaturstatus;
                   joystickbuffer[3] = maxminstatus;
-                  SPI_out2data(102,spijoystickdata);
+                  SPI_out2data(102,spijoystickdata); //Anzeige
                   uint8_t senderfolg = usb_rawhid_send((void *)joystickbuffer, 10);
                }
                break;
