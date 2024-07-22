@@ -12,6 +12,7 @@
 #define LOOPLED 14
 #define TIMER0_STARTWERT   0x40
 
+#define JOYSTICK 0
 
 // Stepper A
 
@@ -183,7 +184,14 @@
 #define TASTE0     946
 #define TASTER     993
 */
+
 #define TASTEX  10
+
+
+
+
+
+
 #define TASTE1  56
 #define TASTE2  78
 #define TASTE3  101
@@ -197,6 +205,9 @@
 #define TASTEL     250
 #define TASTE0     250
 #define TASTER     250
+
+
+
 
 
 // von Mill32

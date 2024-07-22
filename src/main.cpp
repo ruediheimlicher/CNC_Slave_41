@@ -71,6 +71,22 @@
 //#include <MUIU8g2.h>
 
 
+// Joystick
+#define JOYSTICKTASTE2 25
+#define JOYSTICKTASTE1 43
+#define JOYSTICKTASTE4 69
+#define JOYSTICKTASTE7 89
+#define JOYSTICKTASTE8 112
+#define JOYSTICKTASTE3 135
+#define JOYSTICKTASTE6 157
+#define JOYSTICKTASTE9 187
+#define JOYSTICKTASTE5 211
+
+#define JOYSTICKTASTEL  250
+#define JOYSTICKTASTER  250
+#define JOYSTICKTASTE0  250
+
+
 #define OLED_RESET   -1
 #define OLED_CS      14
 #define OLED_DC      12
@@ -1342,6 +1358,38 @@ uint8_t Tastenwahl(uint16_t Tastaturwert)
    
    return 0;
 }
+
+
+uint8_t Joystick_Tastenwahl(uint16_t Tastaturwert)
+{
+   
+   if (Tastaturwert < JOYSTICKTASTE1) 
+      return 1;
+   if (Tastaturwert < JOYSTICKTASTE2)
+      return 2;
+   if (Tastaturwert < JOYSTICKTASTE3)
+      return 3;
+   if (Tastaturwert < JOYSTICKTASTE4)
+      return 4;
+   if (Tastaturwert < JOYSTICKTASTE5)
+      return 5;
+   if (Tastaturwert < JOYSTICKTASTE6)
+      return 6;
+   if (Tastaturwert < JOYSTICKTASTE7)
+      return 7;
+   if (Tastaturwert < JOYSTICKTASTE8)
+      return 8;
+   if (Tastaturwert < JOYSTICKTASTE9)
+      return 9;
+   if (Tastaturwert < JOYSTICKTASTEL)
+      return 10;
+   if (Tastaturwert < JOYSTICKTASTE0)
+      return 0;
+   if (Tastaturwert < JOYSTICKTASTER)
+      return 12;
+   
+   return 0;
+}
  // tastenwahl
 
  // von Mill32
@@ -1638,7 +1686,7 @@ void haltfunktion(void)
 void tastenfunktion(uint16_t Tastenwert)
 {
    
-   if (Tastenwert>23) // ca Minimalwert der Matrix
+   if (Tastenwert>13) // ca Minimalwert der Matrix
    {
       //         wdt_reset();
       
@@ -1648,12 +1696,15 @@ void tastenfunktion(uint16_t Tastenwert)
       {
          
          tastaturcounter=0x00;
+
          if (analogtastaturstatus & (1<<TASTE_ON)) // Taste schon gedrueckt
          {
             //();
          }
          else // Taste neu gedrückt
          {
+            uint8_t t = Tastenwert & 0xFF;
+            //SPI_out2data(102,t);
             //OSZIA_LO();
             analogtastaturstatus |= (1<<TASTE_ON); // nur einmal
             if(Tastenwert > 250)
@@ -1661,7 +1712,17 @@ void tastenfunktion(uint16_t Tastenwert)
                //SPI_out2data(101,0xFF);
                //haltfunktion();
             }
-            Taste=Tastenwahl(Tastenwert);
+            
+            if (JOYSTICK)
+            {
+               Taste= Joystick_Tastenwahl(Tastenwert);
+            }
+            else
+            {
+               Taste=Tastenwahl(Tastenwert);
+            }
+            
+
             // Serial.printf("Tastenwert: %d Taste: %d \n",Taste,Tastenwert);
             tastaturcounter=0;
             Tastenwert=0x00;
@@ -1956,12 +2017,13 @@ void tastenfunktion(uint16_t Tastenwert)
             //   spidata &= ~(1<<7);
             }
 
+            
             OSZIB_HI();
             // Tastaturtimer starten
             if (pfeiltastecode > 0)
             {
                
-               SPI_out2data(101,spidata);
+               //SPI_out2data(101,spidata);
                 //OSZIA_HI();
                tastaturimpulscounter = 0;
                tastaturTimer.begin(tastaturtimerFunktion,TASTENSTARTIMPULSDAUER);
@@ -2802,7 +2864,7 @@ void loop()
    
    }// sincelaststep > 50
  
-   uint16_t spi_index = 0;
+   //uint16_t spi_index = 0;
 
    //#pragma mark start_(usb
    
