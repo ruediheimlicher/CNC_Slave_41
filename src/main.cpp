@@ -1150,7 +1150,7 @@ void AnschlagVonMotor(const uint8_t motor)
                   if(motor == 0)
                   {
                      digitalWriteFast(MA_EN, HIGH);
-                     
+
                   }
                   else if(motor == 1)
                   {
@@ -1272,7 +1272,7 @@ void AnschlagVonMotor(const uint8_t motor)
             }
 
             sendbuffer[5] = (abschnittnummer & 0xFF00) >> 8;
-            ;
+            
             sendbuffer[6] = abschnittnummer & 0x00FF;
 
             sendbuffer[7] = (ladeposition & 0xFF00) >> 8;
@@ -1300,13 +1300,15 @@ void AnschlagVonMotor(const uint8_t motor)
          {
          }
       }
+      /*
       else
       {
-         if (!(anschlagstatus & (1 << (END_A0 + motor))))
+         if ((anschlagstatus & (1 << (END_A0 + motor))))
          {
             anschlagstatus &= ~(1 << (END_A0 + motor)); // Bit fuer Anschlag B0 zuruecksetzen
          }
       }
+      */
       // // Serial.printf("End Anschlag AbschnittCounter %d\n",AbschnittCounter);
    }
 }
