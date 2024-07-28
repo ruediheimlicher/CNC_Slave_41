@@ -1081,6 +1081,7 @@ void AnschlagVonMotor(const uint8_t motor)
    {
    case 0:
    {
+      
       endPin = END_A0_PIN;
       endBit = motor;
    }
@@ -1118,14 +1119,16 @@ void AnschlagVonMotor(const uint8_t motor)
    {
       //   AnschlagVonMotor(0); // Bewegung anhalten
       // Strom OFF
+      
       analogWrite(DC_PWM, 0);
-      // if (richtung & (1<<(RICHTUNG_A + motor))) // Richtung ist auf Anschlag A0 zu
       if (richtung & (1 << (RICHTUNG_A + motor))) // Richtung ist auf Anschlag A0 zu   (RICHTUNG_A ist 0)
 
       {
          if (!(anschlagstatus & (1 << (END_A0 + motor))))
          {
             // cli();
+            
+
             // Serial.printf("\t*** Motor %d ist am anschlag angekommen\n", motor);
             anschlagstatus |= (1 << (END_A0 + motor)); // Bit fuer Anschlag A0+motor setzen (END_A0 ist 4)
 
@@ -1142,8 +1145,17 @@ void AnschlagVonMotor(const uint8_t motor)
                {
                   // Serial.printf("Stepperport 1\n");
                   // STEPPERPORT_1 |= (1<<(MA_EN + motor));     // Motor 0,1 OFF
-                  digitalWriteFast(MA_EN, HIGH);
-                  digitalWriteFast(MB_EN, HIGH);
+
+                  // Motor 0 ODER 1 OFF // andere Richtung kommt anschliessend von master
+                  if(motor == 0)
+                  {
+                     digitalWriteFast(MA_EN, HIGH);
+                     
+                  }
+                  else if(motor == 1)
+                  {
+                     digitalWriteFast(MB_EN, HIGH);
+                  }
 
                   // STEPPERPORT_2 |= (1<<(MA_EN + motor + 2)); // Paralleler Motor 2,3 OFF
                   //              StepCounterA=0;
@@ -1172,6 +1184,15 @@ void AnschlagVonMotor(const uint8_t motor)
                   //    STEPPERPORT_2 |= (1<<(MA_EN + motor));     // Motor 2,3 OFF
                   //digitalWriteFast(MC_EN, HIGH);
                   //digitalWriteFast(MD_EN, HIGH); // Paralleler Motor 0,1 OFF
+                     if(motor == 2)
+                  {
+                     digitalWriteFast(MA_EN, HIGH);
+                  }
+                  else if(motor == 3)
+                  {
+                     digitalWriteFast(MB_EN, HIGH);
+                  }
+
                   StepCounterC = 0;
                   StepCounterD = 0;
                   xA = 0;
@@ -2241,6 +2262,7 @@ void setup()
 
    //Serial.begin(115200);
    pinMode(LOOPLED, OUTPUT);
+   digitalWriteFast(LOOPLED,LOW);
 
 // https://registry.platformio.org/libraries/pedvide/Teensy_ADC/examples/analogRead/analogRead.ino
    pinMode(TASTATURPIN , INPUT);
@@ -2498,7 +2520,7 @@ void loop()
       //      // lcd.setCursor(0,1);
       //      // lcd.print(String(loopLED));
       
-    digitalWriteFast(LOOPLED,!(digitalRead(LOOPLED)));
+      //digitalWriteFast(LOOPLED,!(digitalRead(LOOPLED)));
 
 
       parallelcounter += 2;
@@ -3310,7 +3332,6 @@ void loop()
             AbschnittCounter = 0;
             PWM = sendbuffer[29];
             // digitalWriteFast(DC_PWM,HIGH);
-
             analogWrite(DC_PWM, 0);
 
             StepCounterA = 0;
@@ -3759,14 +3780,16 @@ void loop()
 
    if (digitalRead(END_A0_PIN)) // Eingang ist HI, Schlitten nicht am Anschlag A0
    {
-
+      //digitalWriteFast(LOOPLED,LOW);
       if (anschlagstatus & (1 << END_A0)) // Schlitten war, aber ist nicht mehr am Anschlag
       {
+         //digitalWriteFast(LOOPLED,LOW);
          anschlagstatus &= ~(1 << END_A0); // Bit fuer Anschlag A0 zuruecksetzen
       }
    }
    else // Schlitten bewegte sich auf Anschlag zu und ist am Anschlag A0
    {
+      //digitalWriteFast(LOOPLED,HIGH);
       // // Serial.printf("Anschlag Motor A\n");
       AnschlagVonMotor(0); // Bewegung anhalten
    }
@@ -3787,6 +3810,7 @@ void loop()
    else // Schlitten bewegte sich auf Anschlag zu und ist am Anschlag B0
    {
       // // Serial.printf("Anschlag Motor B\n");
+      
       AnschlagVonMotor(1);
    } // end Anschlag B0
 
