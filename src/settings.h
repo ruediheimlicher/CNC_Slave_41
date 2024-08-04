@@ -23,6 +23,7 @@
  #define MC_STEP        6
  #define MC_RI          7
  #define MC_EN          8
+ #define MD_EN          5
  
  //Pins 
 

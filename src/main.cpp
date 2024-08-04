@@ -278,6 +278,19 @@ volatile uint16_t deltafastdelayB = 0; // aktueller delay
 volatile uint16_t bres_delayB = 0;     // steps fuer fastdirection
 volatile uint16_t bres_counterB = 0;   // zaehler fuer fastdirection
 
+volatile int16_t xC, yC, tC, dxC, dyC, incxC, incyC, pdxC, pdyC, ddxC, ddyC, deltaslowdirectionC, deltafastdirectionC, errC;
+volatile int16_t xD, yD, tD, dxD, dyD, incxD, incyD, pdxD, pdyD, ddxD, ddyD, deltaslowdirectionD, deltafastdirectionD, errD;
+
+
+volatile uint16_t deltafastdelayC = 0; // aktueller delay
+volatile uint16_t bres_delayC = 0;     // steps fuer fastdirection
+volatile uint16_t bres_counterC = 0;   // zaehler fuer fastdirection
+
+volatile uint16_t deltafastdelayD = 0; // aktueller delay
+volatile uint16_t bres_delayD = 0;     // steps fuer fastdirection
+volatile uint16_t bres_counterD = 0;   // zaehler fuer fastdirection
+
+
 volatile uint8_t timerstatus = 0;
 
 volatile uint8_t status = 0;
@@ -1100,12 +1113,13 @@ void AnschlagVonMotor(const uint8_t motor)
    break;
    case 3:
    {
-      // endPin = END_D0;
+       endPin = END_D0;
+       endBit = motor;
    }
    break;
 
    } // switch motor
-
+   /*
    if (digitalRead(endPin)) // Eingang ist HI, Schlitten nicht am Anschlag A0
    {
       // if (anschlagstatus &(1<< endPin)) // Schlitten war, aber ist nicht mehr am Anschlag
@@ -1116,15 +1130,15 @@ void AnschlagVonMotor(const uint8_t motor)
       }
    }
    else // Schlitten bewegte sich auf Anschlag zu und ist am Anschlag A0
+   */
    {
       //   AnschlagVonMotor(0); // Bewegung anhalten
       // Strom OFF
       
       analogWrite(DC_PWM, 0);
       if (richtung & (1 << (RICHTUNG_A + motor))) // Richtung ist auf Anschlag A0 zu   (RICHTUNG_A ist 0)
-
       {
-         if (!(anschlagstatus & (1 << (END_A0 + motor))))
+         if (!(anschlagstatus & (1 << (END_A0 + motor)))) // Bit ist noch nicht gesetzt
          {
             // cli();
             
@@ -1184,29 +1198,29 @@ void AnschlagVonMotor(const uint8_t motor)
                   //    STEPPERPORT_2 |= (1<<(MA_EN + motor));     // Motor 2,3 OFF
                   //digitalWriteFast(MC_EN, HIGH);
                   //digitalWriteFast(MD_EN, HIGH); // Paralleler Motor 0,1 OFF
-                     if(motor == 2)
+                  if(motor == 2)
                   {
-                     digitalWriteFast(MA_EN, HIGH);
+                     digitalWriteFast(MC_EN, HIGH);
                   }
                   else if(motor == 3)
                   {
-                     digitalWriteFast(MB_EN, HIGH);
+                     digitalWriteFast(MD_EN, HIGH);
                   }
 
                   StepCounterC = 0;
                   StepCounterD = 0;
-                  xA = 0;
-                  yA = 0;
-                  xB = 0;
-                  yB = 0;
+                  xC = 0;
+                  yC = 0;
+                  xC = 0;
+                  yD = 0;
 
-                  bres_counterA = 0;
-                  bres_delayA = 0;
+                  bres_counterC = 0;
+                  bres_delayC = 0;
 
-                  bres_counterB = 0;
-                  bres_delayB = 0;
-                  deltafastdirectionB = 0;
-                  deltafastdelayB = 0;
+                  bres_counterC = 0;
+                  bres_delayC = 0;
+                  deltafastdirectionD = 0;
+                  deltafastdelayD = 0;
 
                   //               CounterC=0xFFFF;
                   //               CounterD=0xFFFF;
@@ -1219,17 +1233,19 @@ void AnschlagVonMotor(const uint8_t motor)
                digitalWriteFast(MD_EN,HIGH);
                 */
 
-            }    // home
+            }    // end home
             else // beide Seiten abstellen
             {
                // Serial.printf("CCC\n");
                cncstatus = 0;
                sendbuffer[0] = 0xA5 + motor;
 
+               /*
                if (motor < 2) // Stepperport 1
                {
                   // STEPPERPORT_1 |= (1<<(MA_EN + motor));     // Motor 0,1 OFF
                   digitalWriteFast(MA_EN, HIGH);
+
                   // STEPPERPORT_2 |= (1<<(MA_EN + motor + 2)); // Paralleler Motor 2,3 OFF
                   digitalWriteFast(MA_EN + 2, HIGH);
                }
@@ -1240,6 +1256,12 @@ void AnschlagVonMotor(const uint8_t motor)
                   // STEPPERPORT_1 |= (1<<(MA_EN + motor - 2)); // Paralleler Motor 0,1 OFF
                   digitalWriteFast(MA_EN + motor + 4, HIGH);
                }
+               */
+
+               deltafastdirectionA = 0;
+               deltafastdirectionB = 0;
+               deltaslowdirectionA = 0;
+               deltaslowdirectionB = 0;
 
                // Alles abstellen
                StepCounterA = 0;
@@ -1268,9 +1290,11 @@ void AnschlagVonMotor(const uint8_t motor)
                digitalWriteFast(MA_EN, HIGH);
                digitalWriteFast(MB_EN, HIGH);
                digitalWriteFast(MC_EN, HIGH);
-               //digitalWriteFast(MD_EN, HIGH);
+               digitalWriteFast(MD_EN, HIGH);
             }
-
+            ladeposition=0;
+            motorstatus=0;
+            
             sendbuffer[5] = (abschnittnummer & 0xFF00) >> 8;
             
             sendbuffer[6] = abschnittnummer & 0x00FF;
@@ -1285,6 +1309,7 @@ void AnschlagVonMotor(const uint8_t motor)
 
             // Serial.printf("E\n");
             uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
+
              // Serial.printf("*** Anschlag Home motor senderfolg: %d\n",senderfolg);
             for (uint8_t i = 0; i < 32; i++) // 5 us ohne printf, 10ms mit printf
             {
@@ -1471,16 +1496,16 @@ void joysticktimerAFunktion(void)
 
       diff = 0;
       mapdiff = 0;
-      uint8_t richtung = 0; 
+      uint8_t joystickrichtung = 0; 
 
      if (potwertA > potmitteA) // vorwaerts
      {
-         richtung  = 1;
+         joystickrichtung  = 1;
          diff = (potwertA - potmitteA);
       }
      else 
      {
-         richtung = 0;
+         joystickrichtung = 0;
          diff = potmitteA -potwertA; //(joystickMitteArray[tempindex] - joystickWertArray[tempindex]);
       }
 
@@ -1489,7 +1514,7 @@ void joysticktimerAFunktion(void)
       { 
 
     
-         if (richtung)
+         if (joystickrichtung)
          {
             mapdiff = map(diff,0,calibmaxA - potmitteA ,0,JOYSTICKMAXDIFF);
          }
@@ -1515,7 +1540,7 @@ void joysticktimerAFunktion(void)
          
          joysticktimerA.update(((JOYSTICKMAXTICKS - mapdiff)));
 
-         if(richtung)
+         if(joystickrichtung)
          {
             digitalWriteFast(MA_RI,LOW);
          }
@@ -1565,18 +1590,18 @@ void joysticktimerBFunktion(void)
 
       diff = 0;
       mapdiff = 0;
-      uint8_t richtung = 0; 
+      uint8_t joystickrichtung = 0; 
      //digitalWriteFast(MB_EN,LOW);
 
      if (potwertB > potmitteB) // vorwaerts
      {
-         richtung  = 1;
+         joystickrichtung  = 1;
          diff = (potwertB - potmitteB);
      }
      else 
      {
          //digitalWriteFast(MA_RI,HIGH);
-         richtung = 0;
+         joystickrichtung = 0;
          diff = potmitteB -potwertB; //(joystickMitteBrray[tempindex] - joystickWertBrray[tempindex]);
      }
 
@@ -1584,7 +1609,7 @@ void joysticktimerBFunktion(void)
      //if(abs(potwertB - joystickMitteBrray[tempindex]) > JOYSTICKTOTBEREICH) // ausserhalb mitte
      if(diff > JOYSTICKTOTBEREICH) // ausserhalb mitte
      {
-         if (richtung)
+         if (joystickrichtung)
          {
             mapdiff = map(diff,0,calibmaxB - potmitteB,0,JOYSTICKMAXDIFF);
 
@@ -1615,7 +1640,7 @@ void joysticktimerBFunktion(void)
 
          digitalWriteFast(MB_STEP,LOW);
          digitalWriteFast(MB_EN,LOW);
-         if(richtung)
+         if(joystickrichtung)
          {
             digitalWriteFast(MB_RI,LOW);
          }
@@ -2701,7 +2726,7 @@ void loop()
       }
       
       //SPI_out2data(out_data[2*paketnummer],out_data[2*paketnummer+1]);
-       char buf[4];
+      // char buf[4];
       /*
         lcd.setCursor(0, 0);
         lcd.print(101);
@@ -3191,7 +3216,7 @@ void loop()
          }
          break;
 
-         ////#pragma mark C0 Pfeiltaste
+         ////#pragma mark C0 Pfeiltaste (von AV manFeldRichtung)
          case 0xC0: // mousedown
          {
             //// Serial.printf("case C0\n");
@@ -3206,7 +3231,7 @@ void loop()
             abschnittnummer += indexl;
             sendbuffer[0] = 0xC2;
             uint8_t lage = buffer[25];
-            uint8_t richtung = buffer[31];
+            uint8_t mausrichtung = buffer[29];
             // // Serial.printf("\n****************************************\n");
             // // Serial.printf("C0 Abschnitt lage: %d abschnittnummer: %d richtung: %d\n",lage,abschnittnummer, richtung);
             // // Serial.printf("****************************************\n");
@@ -3237,7 +3262,14 @@ void loop()
             }
             
             taskstatus |= (1<<TASK);
-            sendbuffer[0] = 0xC2;
+            sendbuffer[0] = 0xC1;
+            sendbuffer[29] = mausrichtung;
+
+            for (uint8_t i=0;i<16;i++)
+            {
+               sendbuffer[i+2] = buffer[i];
+            }
+
             uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
             startTimer2();
                   
@@ -3246,12 +3278,10 @@ void loop()
          }
          break;
 
-         case 0xC2: // mouseup
+         case 0xC2: // mouseup  (von AV manFeldRichtung)
          {
             //// Serial.printf("case C2\n");
-            uint8_t richtung = buffer[31];
-            //// Serial.printf("richtung: %d\n", richtung);
-            //// Serial.printf("StepCounterA: %d StepCounterB: %d StepCounterC: %d StepCounterD: %d \n", StepCounterA, StepCounterB, StepCounterC, StepCounterD);
+            uint8_t mausrichtung = buffer[29];
             StepCounterA = 0;
             StepCounterB = 0;
             StepCounterC = 0;
@@ -3288,7 +3318,8 @@ void loop()
             taskstatus &= ~(1<<TASK);
 
             analogtastaturstatus &= ~(1<<TASTE_ON);
-            sendbuffer[0] = 0xC2;
+            sendbuffer[0] = 0xC3;
+            sendbuffer[29] = mausrichtung;
             uint8_t senderfolg = usb_rawhid_send((void *)sendbuffer, 10);
 
          }
@@ -3476,7 +3507,7 @@ void loop()
             // Strom OFF
             analogWrite(DC_PWM, 0);
 
-            // abschnittnummer = 0; // diff 220520
+             abschnittnummer = 0; // diff 220520
 
             ladeposition = 0;
             endposition = 0xFFFF;
@@ -3495,7 +3526,7 @@ void loop()
             sendbuffer[0] = 0xF1;
 
             cncstatus |= (1 << GO_HOME); // Bit fuer go_home setzen
-            sendbuffer[63] = 1;
+            //sendbuffer[63] = 1;
             sendbuffer[22] = cncstatus;
 
             // Daten vom buffer in CNCDaten laden
@@ -3665,10 +3696,10 @@ void loop()
                   // versionl=VERSION & 0xFF;
                   // versionh=((VERSION >> 8) & 0xFF);
 
-                  sendbuffer[5] = abschnittnummer;
-                  sendbuffer[6] = ladeposition;
+                  sendbuffer[5] = abschnittnummer & 0xFF;
+                  sendbuffer[6] = ladeposition & 0xFF;
                   sendbuffer[0] = 0xAF;
-                  usb_rawhid_send((void *)sendbuffer, 0);
+                  usb_rawhid_send((void *)sendbuffer, 50);
                   tastaturstatus = 0xF0 ;
                   sei();
                }
@@ -3778,7 +3809,6 @@ void loop()
    // ********************
    // * Anschlag Motor A *
    // ********************
-   // AnschlagVonMotor(0);
 
    if (digitalRead(END_A0_PIN)) // Eingang ist HI, Schlitten nicht am Anschlag A0
    {
@@ -3864,7 +3894,7 @@ void loop()
    // **************************************
    // * Motor A,B *
    // **************************************
-   noInterrupts();
+   //noInterrupts();
 
    if (deltafastdirectionA > 0) // Bewegung auf Seite A vorhanden
    {
