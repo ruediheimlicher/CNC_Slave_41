@@ -815,6 +815,7 @@ uint8_t AbschnittLaden_bres(uint8_t *AbschnittDaten) // 22us
    {
       richtung |= (1 << RICHTUNG_A); // Rueckwarts
       digitalWriteFast(MA_RI, LOW);  // PIN fuer Treiber stellen
+      //digitalWriteFast(MA_RI, HIGH);
       vz = -1;
       // lcd_putc('r');
    }
@@ -822,6 +823,7 @@ uint8_t AbschnittLaden_bres(uint8_t *AbschnittDaten) // 22us
    {
       richtung &= ~(1 << RICHTUNG_A);
       digitalWriteFast(MA_RI, HIGH);
+      //digitalWriteFast(MA_RI, LOW); 
       // lcd_putc('v');   // Vorwaerts
    }
 
@@ -1119,24 +1121,16 @@ void AnschlagVonMotor(const uint8_t motor)
    break;
 
    } // switch motor
-   /*
-   if (digitalRead(endPin)) // Eingang ist HI, Schlitten nicht am Anschlag A0
+   
    {
-      // if (anschlagstatus &(1<< endPin)) // Schlitten war, aber ist nicht mehr am Anschlag
-      if (anschlagstatus & (1 << motor)) // Schlitten war, aber ist nicht mehr am Anschlag
-
-      {
-         anschlagstatus &= ~(1 << motor); // Bit fuer Anschlag A0 zuruecksetzen
-      }
-   }
-   else // Schlitten bewegte sich auf Anschlag zu und ist am Anschlag A0
-   */
-   {
-      //   AnschlagVonMotor(0); // Bewegung anhalten
+      
       // Strom OFF
       
-      analogWrite(DC_PWM, 0);
-      if (richtung & (1 << (RICHTUNG_A + motor))) // Richtung ist auf Anschlag A0 zu   (RICHTUNG_A ist 0)
+      //analogWrite(DC_PWM, 0);
+     
+     PWM = 0;
+
+     if (richtung & (1 << (RICHTUNG_A + motor))) // Richtung ist auf Anschlag A0 zu   (RICHTUNG_A ist 0)
       {
          if (!(anschlagstatus & (1 << (END_A0 + motor)))) // Bit ist noch nicht gesetzt
          {
