@@ -551,6 +551,11 @@ void SPI_out2data(uint8_t data0,uint8_t data1)
 
 }
 
+long max(long a, long b)
+{
+   return (((a) > (b)) ? (a) : (b));
+   
+}
 
 long map(long x, long in_min, long in_max, long out_min, long out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -675,7 +680,7 @@ void delaytimerfunction(void) // 1us ohne ramp
 void tastaturtimerFunktion(void) // TASTENSTARTIMPULSDAUER
 {
 
-   OSZIB_LO();
+   //OSZIB_LO();
    if (tastaturindex % 2) // ungerade, Impuls
    {
          tastaturTimer.update(IMPULSBREITE);
@@ -1472,8 +1477,8 @@ void joysticktimerAFunktion(void)
    
    if(joystickindexA % 2) // ungerade, Impuls, 1,3
    {
-      OSZIB_HI();
-       OSZIC_HI();
+      //OSZIB_HI();
+      // OSZIC_HI();
        OSZIA_HI();
      //ungerade, impulsabstand einstellen, PINs deaktivieren
    
@@ -1484,7 +1489,7 @@ void joysticktimerAFunktion(void)
    }
    else 
    {
-      OSZIB_LO();
+      //OSZIB_LO();
       // Pulslaenge einstellen, PINs aktivieren
       uint8_t tempindex = joystickindexA & 0x03; // 0,2
 
@@ -1566,8 +1571,8 @@ void joysticktimerBFunktion(void)
    }
    if(joystickindexB % 2) // ungerade, Impuls, 1,3
    {
-      OSZIB_HI();
-       OSZIC_HI();
+      //();
+       //OSZIC_HI();
        OSZIA_HI();
      //ungerade, impulsabstand einstellen, PINs deaktivieren
    
@@ -1578,7 +1583,7 @@ void joysticktimerBFunktion(void)
    }
    else 
    {
-      OSZIB_LO();
+      //OSZIB_LO();
       // Pulslaenge einstellen, PINs aktivieren
       uint8_t tempindex = joystickindexB & 0x03; // 0,2
 
@@ -1806,7 +1811,7 @@ void tastenfunktion(uint16_t Tastenwert)
                   //uint8_t lage = AbschnittLaden_TS(pfeil4);
                   if (pfeiltastecode == 0)
                   {
-                     OSZIB_LO();
+                     //OSZIB_LO();
                      pfeiltastecode = 2;
                      pfeilimpulsdauer = TASTENSTARTIMPULSDAUER;
                      endimpulsdauer = TASTENENDIMPULSDAUER;
@@ -2077,7 +2082,7 @@ void tastenfunktion(uint16_t Tastenwert)
             }
 
             
-            OSZIB_HI();
+            //OSZIB_HI();
             // Tastaturtimer starten
             if (pfeiltastecode > 0)
             {
@@ -2347,12 +2352,12 @@ void setup()
    pinMode(END_A0_PIN, INPUT); //
    pinMode(END_B0_PIN, INPUT); //
    pinMode(END_C0_PIN, INPUT); //
-   //pinMode(END_D0_PIN, INPUT); //
+   pinMode(END_D0_PIN, INPUT); //
 
    pinMode(END_A0_PIN, INPUT_PULLUP); // HI
    pinMode(END_B0_PIN, INPUT_PULLUP); //
    pinMode(END_C0_PIN, INPUT_PULLUP); //
-   //pinMode(END_D0_PIN, INPUT_PULLUP); //
+   pinMode(END_D0_PIN, INPUT_PULLUP); //
 
    if (TEST)
    {
@@ -2396,6 +2401,8 @@ void setup()
 
 
   // rampstatus |= (1 << RAMPOKBIT);
+
+
 
    //// lcd.setCursor(0,0);
    //// lcd.print("hallo");
@@ -2870,7 +2877,7 @@ void loop()
       
       if (analogtastaturstatus & (1<<TASTE_ON)) // Taste gedrueckt
       {
-         OSZIC_LO();
+         //OSZIC_LO();
 
       }
       else 
@@ -2887,7 +2894,7 @@ void loop()
          digitalWriteFast(MB_STEP,HIGH);
          digitalWriteFast(MC_STEP,HIGH);
          */
-         OSZIC_HI();
+         //OSZIC_HI();
       }
   
       // // Serial.printf("sincelaststep\n");
@@ -3923,6 +3930,7 @@ void loop()
                rampstatus &= ~(1 << RAMPOKBIT);
             }
          } //  RAMPSTARTBIT
+
 
 
 
